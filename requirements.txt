@@ -7,5 +7,7 @@ psutil==5.9.8
 apscheduler
 requests
 Pillow
-duckduckgo_search
-cinemagoer
+aiofiles
+httpx
+bs4
+imdbio
