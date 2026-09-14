@@ -92,3 +92,30 @@ def set_maintenance_mode(status: bool):
         {'$set': {'status': status}}, 
         upsert=True
     )
+
+
+# --- database.py ഫയലിന്റെ ഏറ്റവും താഴെയായി ഇത് റീപ്ലേസ് ചെയ്യുക ---
+
+def get_group_locks(chat_id: int):
+    """ഗ്രൂപ്പിലെ നിലവിലെ എല്ലാ ലോക്ക് സെറ്റിങ്സും എടുക്കുന്നു"""
+    config = settings_collection.find_one({'_id': f'locks_{chat_id}'})
+    if config:
+        return config.get('locks', {})
+    
+    # ഡിഫോൾട്ട് ആയി എല്ലാം അനുവദിച്ചിരിക്കുന്നു (Allow = False)
+    return {
+        "photos": False, "videos": False, "stickers": False, "voice": False, 
+        "audio": False, "document": False, "animation": False, "poll": False,
+        "video_note": False, "contact": False, "location": False, "inline": False,
+        "story": False, "game": False, "channel": False
+    }
+
+def set_group_lock(chat_id: int, media_type: str, status: bool):
+    """ഒരു പ്രത്യേക മീഡിയ ലോക്ക്/അൺലോക്ക് ചെയ്യാൻ"""
+    current_locks = get_group_locks(chat_id)
+    current_locks[media_type] = status
+    settings_collection.update_one(
+        {'_id': f'locks_{chat_id}'}, 
+        {'$set': {'locks': current_locks}}, 
+        upsert=True
+    )
