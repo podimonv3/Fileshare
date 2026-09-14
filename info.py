@@ -6,5 +6,3 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", None)
 MONGO_URI = os.getenv("MONGO_URI", None)
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", "-1003851866517"))
-OMDB_API_KEY = os.environ.get("OMDB_API_KEY", "3feaa2f6")
-
