@@ -6,6 +6,14 @@ from info import OWNER_ID
 from database import batch_collection, requests_collection, get_req_channel, add_user
 from handlers.join_requests import auto_delete_messages
 
+import base64
+import asyncio
+from pyrogram import Client, filters
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from info import OWNER_ID
+from database import batch_collection, requests_collection, get_req_channel, add_user
+from handlers.join_requests import auto_delete_messages
+
 @Client.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
     user_id = message.from_user.id
@@ -36,20 +44,21 @@ async def start_command(client: Client, message: Message):
                 "📊 `/stats` - ബോട്ടിന്റെ നിലവിലെ യൂസർമാരുടെയും, ഡാറ്റാബേസിന്റെയും, റാം വിവരങ്ങളും പരിശോധിക്കാൻ.\n"
                 "📂 **Batch Link ക്രിയേറ്റ് ചെയ്യാൻ:** ചാനലിലെ ആദ്യത്തെ ഫയലും അവസാനത്തെ ഫയലും ബോട്ടിലേക്ക് ഫോർവേഡ് ചെയ്യുക."
             )
-            await message.reply_text(text=admin_text, reply_markup=InlineKeyboardMarkup(user_keyboard), parse_mode="HTML")
+            # 🚨 ഇവിടെ parse_mode="html" എന്ന് ചെറിയ അക്ഷരങ്ങളിലേക്ക് മാറ്റിയിരിക്കുന്നു
+            await message.reply_text(text=admin_text, reply_markup=InlineKeyboardMarkup(user_keyboard), parse_mode="html")
         
         # 👥 മെസ്സേജ് അയച്ചത് സാധാരണ യൂസർ ആണെങ്കിൽ ഉള്ള മെസ്സേജ്
         else:
             user_text = (
                 "👋 **ഹലോ! ഞങ്ങളുടെ ബോട്ടുമായി ബന്ധപ്പെട്ട വിവരങ്ങൾ താഴെ നൽകുന്നു:**\n\n"
-                "আমি একটি উন্নত জয়েন রিকোয়েস্ট ফিচারযুক্ত ফাইল শেয়ারিং বট। 📂\n"
+                "ഞാൻ ഒരു അഡ്വാന്‍സ്ഡ് ജോയിൻ റിക്വസ്റ്റ് ഫീച്ചറുള്ള ഫയൽ ഷെയറിങ് ബോട്ട് ആണ്. 📂\n\n"
                 "ലിങ്കുകൾ വഴി ഫയലുകൾ നേടാൻ താഴെ കാണുന്ന ചാനലുകളിലും ഗ്രൂപ്പുകളിലും ജോയിൻ ചെയ്യുക 👇"
             )
             await message.reply_text(text=user_text, reply_markup=InlineKeyboardMarkup(user_keyboard))
         return
 
-    # 2️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം (ഇതിൽ മാറ്റമില്ല)
-    batch_id = message.command[1]
+    # 2️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം
+    batch_id = message.command[1] if len(message.command) > 1 else message.command
     is_joined = False
     try:
         member = await client.get_chat_member(chat_id=current_channel, user_id=user_id)
@@ -78,11 +87,12 @@ async def start_command(client: Client, message: Message):
             link = "https://t.me"
 
         keyboard = [[InlineKeyboardButton("📩 Request to Join Channel", url=link)]]
+        # 🚨 ഇവിടെയും parse_mode="html" ആക്കി
         await message.reply_text(
             "⚠️ <b>ഫയലുകൾ ലഭിക്കുന്നതിനായി താഴെ കാണുന്ന ചാനലിലേക്ക് Join Request അയക്കുക!</b>\n\n"
             "👇 <i>താഴെയുള്ള ബട്ടൺ അമർത്തി റിക്വസ്റ്റ് കൊടുക്കുന്ന നിമിഷം ബോട്ട് ഫയലുകൾ അയച്ചു തരും.</i>",
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="HTML"
+            parse_mode="html"
         )
         return
 
@@ -92,7 +102,8 @@ async def start_command(client: Client, message: Message):
         start_id = batch_data['start_id']
         end_id = batch_data['end_id']
         
-        info_msg = await message.reply_text("✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!", parse_mode="HTML")
+        # 🚨 ഇവിടെയും parse_mode="html" ആക്കി
+        info_msg = await message.reply_text("✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!", parse_mode="html")
         
         sent_msg_ids = []
         for msg_id in range(start_id, end_id + 1):
@@ -105,8 +116,6 @@ async def start_command(client: Client, message: Message):
         asyncio.create_task(auto_delete_messages(client, message.chat.id, sent_msg_ids, info_msg.id))
     else:
         await message.reply_text("❌ തെറ്റായ ലിങ്ക് അല്ലെങ്കിൽ ഈ ബാച്ച് നിലവിലില്ല!")
-
-
 
 # Admin Batch File Forwarding Lock
 @Client.on_message(filters.forwarded & filters.user(OWNER_ID) & (filters.document | filters.photo | filters.video | filters.audio | filters.sticker | filters.text))
@@ -145,4 +154,5 @@ async def handle_forwarded_files(client: Client, message: Message):
         
         await message.reply_text(f"✅ <b>Batch നിർമ്മിച്ചിരിക്കുന്നു!</b>\n🔗 <b>Batch ലിങ്ക്:</b> {batch_link}")
         del client.user_data_store[user_id]
+
 
