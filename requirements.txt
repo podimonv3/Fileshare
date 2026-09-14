@@ -7,7 +7,6 @@ psutil==5.9.8
 apscheduler
 requests
 Pillow
-aiofiles
 httpx
-bs4
+beautifulsoup4
 imdbio
