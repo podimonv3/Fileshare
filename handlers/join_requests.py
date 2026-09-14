@@ -1,6 +1,7 @@
 import asyncio
-from pyrogram import Client, filters
-from database import requests_collection, batch_collection, get_req_channel
+from pyrogram import Client, enums # 🚨 enums ഇവിടെ ഇമ്പോർട്ട് ചെയ്തിട്ടുണ്ട്
+from info import OWNER_ID
+from database import requests_collection, batch_collection, get_req_channel, is_maintenance_mode
 
 # Auto Delete Helper Function
 async def auto_delete_messages(client: Client, chat_id: int, message_ids: list, info_msg_id: int, delay: int = 300):
@@ -20,6 +21,17 @@ async def handle_join_request(client: Client, request):
     user_id = request.from_user.id
     chat_id = request.chat.id
     
+    # 🚨 1. Maintenance Mode സെറ്റ് ചെയ്തിട്ടുണ്ടെങ്കിൽ സാധാരണ ഉപയോക്താക്കൾക്ക് മുന്നറിയിപ്പ് നൽകി ഇവിടെ വെച്ച് തടയുന്നു
+    if is_maintenance_mode() and user_id != OWNER_ID:
+        try:
+            await client.send_message(
+                chat_id=user_id,
+                text="⚠️ **ബോട്ട് അറ്റകുറ്റപ്പണിയിലാണ് (Under Maintenance)**\n\nനിങ്ങളുടെ ജോയിൻ റിക്വസ്റ്റ് ലഭിച്ചിട്ടുണ്ട്. ബോട്ടിലെ പണികൾ പൂർത്തിയായ ഉടൻ തന്നെ നിങ്ങൾ തിരഞ്ഞ ഫയലുകൾ ഓട്ടോമാറ്റിക് ആയി അയച്ചു തരുന്നതാണ്! 🔄"
+            )
+        except:
+            pass
+        return
+
     current_channel = get_req_channel()
     if chat_id == current_channel:
         requests_collection.update_one(
@@ -39,9 +51,11 @@ async def handle_join_request(client: Client, request):
                 end_id = batch_data['end_id']
                 
                 try:
+                    # 🚨 parse_mode=enums.ParseMode.HTML സുരക്ഷിതമായി ആഡ് ചെയ്തു
                     info_msg = await client.send_message(
                         chat_id=user_id,
-                        text="✨ <b>നിങ്ങളുടെ ജോയിൻ റിക്വസ്റ്റ് ലഭിച്ചിരിക്കുന്നു! നിങ്ങൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു:</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!"
+                        text="✨ <b>നിങ്ങളുടെ ജോയിൻ റിക്വസ്റ്റ് ലഭിച്ചിരിക്കുന്നു! നിങ്ങൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു:</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!",
+                        parse_mode=enums.ParseMode.HTML
                     )
                     
                     sent_msg_ids = []
@@ -53,4 +67,3 @@ async def handle_join_request(client: Client, request):
                     requests_collection.update_one({'user_id': user_id, 'channel_id': chat_id}, {'$unset': {'batch_id': ""}})
                 except:
                     pass
-
