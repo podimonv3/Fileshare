@@ -31,3 +31,19 @@ def get_db_size():
         logger.error(f"Error getting DB stats: {e}")
         return 0.0
 
+# --- Add this to the bottom of database.py ---
+
+def is_maintenance_mode():
+    """Checks if maintenance mode is enabled."""
+    config = settings_collection.find_one({'_id': 'maintenance_config'})
+    if config:
+        return config.get('status', False)
+    return False
+
+def set_maintenance_mode(status: bool):
+    """Enables (True) or Disables (False) maintenance mode."""
+    settings_collection.update_one(
+        {'_id': 'maintenance_config'}, 
+        {'$set': {'status': status}}, 
+        upsert=True
+    )
