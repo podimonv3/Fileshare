@@ -55,3 +55,21 @@ def get_delete_time():
 
 def set_delete_time(seconds: int):
     settings_collection.update_one({'_id': 'delete_config'}, {'$set': {'time': seconds}}, upsert=True)
+
+
+# --- database.py-ന്റെ ഏറ്റവും താഴെ ചേർക്കുക ---
+
+def is_protect_content():
+    """പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ ആണോ എന്ന് നോക്കുന്നു (Default: True)"""
+    config = settings_collection.find_one({'_id': 'protect_config'})
+    if config:
+        return config.get('status', True)
+    return True
+
+def set_protect_content(status: bool):
+    """പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ/ഓഫ് ചെയ്യാൻ"""
+    settings_collection.update_one(
+        {'_id': 'protect_config'}, 
+        {'$set': {'status': status}}, 
+        upsert=True
+    )
