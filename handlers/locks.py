@@ -92,7 +92,7 @@ async def locks_callback_handler(client: Client, query):
     except: pass
 
 
-# 3️⃣ മെസ്സേജ് ചെക്കിങ് സിസ്റ്റം 🛡️
+# 🛡️ 3. ഗ്രൂപ്പിൽ വരുന്ന മെസ്സേജുകൾ പരിശോധിച്ച് ലോക്ക് ചെയ്തവ ഡിലീറ്റ് ചെയ്യുന്ന സിസ്റ്റം
 @Client.on_message(filters.group, group=2)
 async def check_group_media_locks(client: Client, message: Message):
     chat_id = message.chat.id
@@ -112,13 +112,13 @@ async def check_group_media_locks(client: Client, message: Message):
         if locks.get("fwd_channel"):
             should_delete = True
 
-    # 3. സിസ്റ്റം സർവീസ് മെസ്സേജുകൾ ചെക്കിങ്
+    # 3. സിസ്റ്റം സർവീസ് മെസ്സേജുകൾ ചെക്കിങ് (തിരുത്തിയ ഭാഗം 🚨)
     if message.new_chat_members and locks.get("new_members"): should_delete = True
     elif message.left_chat_member and locks.get("left_members"): should_delete = True
     elif message.new_chat_title and locks.get("title_changed"): should_delete = True
     elif (message.new_chat_photo or message.delete_chat_photo) and locks.get("photo_changed"): should_delete = True
     elif message.pinned_message and locks.get("pinned"): should_delete = True
-    elif (message.video_chat_started or message.video_chat_ended or message.video_chat_invited or message.video_chat_scheduled) and locks.get("video_chat"): should_delete = True
+    elif (message.video_chat_started or message.video_chat_ended or message.video_chat_members_invited or message.video_chat_scheduled) and locks.get("video_chat"): should_delete = True
 
     # 4. സാധാരണ മെമ്പർമാരുടെ മെസ്സേജുകളിലെ അഡ്വാൻസ്ഡ് ടെക്സ്റ്റ് എൻ്റിറ്റികൾ ചെക്ക് ചെയ്യുന്നു 🔍
     elif message.from_user:
@@ -145,7 +145,7 @@ async def check_group_media_locks(client: Client, message: Message):
         elif message.story and locks.get("story"): should_delete = True; media_name = VALID_LOCKS["story"]
         elif message.game and locks.get("game"): should_delete = True; media_name = VALID_LOCKS["game"]
 
-        # 🚨 പുതിയ ടെക്സ്റ്റ് എൻ്റിറ്റികൾ ചെക്കിങ് (മെസ്സേജ് ക്യാപ്ഷനിലോ ടെക്സ്റ്റിലോ ഉണ്ടെങ്കിൽ)
+        # പുതിയ ടെക്സ്റ്റ് എൻ്റിറ്റികൾ ചെക്കിങ്
         elif (message.text or message.caption):
             entities = message.entities or message.caption_entities
             if entities:
@@ -163,7 +163,7 @@ async def check_group_media_locks(client: Client, message: Message):
                     elif ent.type in [enums.MessageEntityType.BOLD, enums.MessageEntityType.ITALIC, enums.MessageEntityType.SPOILER, enums.MessageEntityType.CODE] and locks.get("text_styles"):
                         should_delete = True; media_name = VALID_LOCKS["text_styles"]
 
-    # 🚫 ലോക്ക് ചെയ്തതാണെങ്കിൽ തൽക്ഷണം ഡിലീറ്റ് ചെയ്യും
+    # ലോക്ക് ചെയ്തതാണെങ്കിൽ തൽക്ഷണം ഡിലീറ്റ് ചെയ്യും
     if should_delete:
         try:
             await message.delete()
@@ -177,6 +177,7 @@ async def check_group_media_locks(client: Client, message: Message):
                 await warn.delete()
         except:
             pass
+
 
 # 🚨 4. എഡിറ്റ് ചെയ്യുന്ന മെസ്സേജുകൾ തടയാൻ (Edited Messages Lock)
 @Client.on_edited_message(filters.group, group=3)
