@@ -1,22 +1,33 @@
 import base64
 import asyncio
-from pyrogram import Client, filters, enums # 🚨 enums ഇമ്പോർട്ട് ചെയ്തിട്ടുണ്ട്
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from info import OWNER_ID
-from database import batch_collection, requests_collection, get_req_channel, add_user
+from database import batch_collection, requests_collection, get_req_channel, add_user, is_maintenance_mode
 from handlers.join_requests import auto_delete_messages
 
 @Client.on_message(filters.command("start") & filters.private)
 async def start_command(client: Client, message: Message):
     user_id = message.from_user.id
+    
+    # 🚨 1. Maintenance Mode സെറ്റ് ചെയ്തിട്ടുണ്ടെങ്കിൽ സാധാരണ യൂസർമാരെ തടയുന്നു
+    if is_maintenance_mode() and user_id != OWNER_ID:
+        await message.reply_text(
+            "⚠️ **അറ്റകുറ്റപ്പണിയിലാണ് (Under Maintenance)**\n\n"
+            "ബോട്ടിൽ ചില പ്രധാന മാറ്റങ്ങൾ വരുത്തിക്കൊണ്ടിരിക്കുകയാണ്. "
+            "അതുകൊണ്ട് താൽക്കാലികമായി സർവീസ് ലഭ്യമായിരിക്കില്ല. ദയവായി കുറച്ചു സമയം കഴിഞ്ഞ് വീണ്ടും ശ്രമിക്കുക! 🙏"
+        )
+        return
+
     add_user(user_id)
     current_channel = get_req_channel()
     
-    # 1️⃣ ലിങ്ക് വഴി അല്ലാതെ വെറുതെ /start അയക്കുമ്പോൾ വരുന്ന ഭാഗം
+    # 2️⃣ ലിങ്ക് വഴി അല്ലാതെ വെറുതെ /start അയക്കുമ്പോൾ വരുന്ന ഭാഗം
     if len(message.command) == 1:
+        # നിങ്ങളുടെ ഒഫീഷ്യൽ ചാനൽ ബട്ടണുകൾ
         user_keyboard = [
             [
-                InlineKeyboardButton("🎈 𝕮𝖍𝖆นนel 🎈", url="https://t.me"),
+                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓𝖓𝖊𝖑 🎈", url="https://t.me"),
                 InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me")
             ],
             [
@@ -24,25 +35,25 @@ async def start_command(client: Client, message: Message):
             ]
         ]
         
-        # 👑 മെസ്സേജ് അയച്ചത് ബോട്ട് അഡ്മിൻ (OWNER) ആണെങ്കിൽ
+        # 👑 മെസ്സേജ് അയച്ചത് ബോട്ട് അഡ്മിൻ (OWNER) ആണെങ്കിൽ കമാൻഡ് ലിസ്റ്റ് കാണിക്കും
         if user_id == OWNER_ID:
             admin_text = (
                 "👋 **ഹലോ അഡ്മിൻ, സുഖമാണോ!**\n\n"
                 "ഞാൻ ഒരു അഡ്വാന്‍സ്ഡ് ജോയിൻ റിക്വസ്റ്റ് ഫീച്ചറുള്ള ഫയൽ ഷെയറിങ് ബോട്ട് ആണ്. 📂\n\n"
                 "🛠️ **<u>ADMIN COMMANDS LIST</u>**\n\n"
-                "📢 `/broadcast` - ഒരു മെസ്സേജിന് മറുപടിയായി (Reply) ഈ കമാൻഡ് ഉപയോഗിച്ചാൽ എല്ലാ ഉപയോക്താക്കൾക്കും ആ മെസ്സേജ് ബ്രോഡ്കാസ്റ്റ് ചെയ്യാം.\n"
-                "🆔 `/setchannel [ചാനൽ_ഐഡി]` - റിക്വസ്റ്റ് ചോദിക്കേണ്ട പുതിയ ചാനൽ ഐഡി സെറ്റ് ചെയ്യാൻ.\n"
-                "📊 `/stats` - ബോട്ടിന്റെ നിലവിലെ യൂസർമാരുടെയും, ഡാറ്റാബേസിന്റെയും, റാം വിവരങ്ങളും പരിശോധിക്കാൻ.\n"
+                "📢 `/broadcast` - എല്ലാ ഉപയോക്താക്കൾക്കും മെസ്സേജ് ബ്രോഡ്കാസ്റ്റ് ചെയ്യാൻ.\n"
+                "🆔 `/setchannel [ID]` - പുതിയ റിക്വസ്റ്റ് ചാനൽ ഐഡി സെറ്റ് ചെയ്യാൻ.\n"
+                "📊 `/stats` - ബോട്ടിന്റെ ഡാറ്റാബേസ്, റാം വിവരങ്ങൾ പരിശോധിക്കാൻ.\n"
+                "🛠️ `/maintenance [on/off]` - ബോട്ട് മെയ്ന്റനൻസ് മോഡിലേക്ക് മാറ്റാൻ/ഒഴിവാക്കാൻ.\n\n"
                 "📂 **Batch Link ക്രിയേറ്റ് ചെയ്യാൻ:** ചാനലിലെ ആദ്യത്തെ ഫയലും അവസാനത്തെ ഫയലും ബോട്ടിലേക്ക് ഫോർവേഡ് ചെയ്യുക."
             )
-            # 🚨 parse_mode=enums.ParseMode.HTML ലേക്ക് മാറ്റി
             await message.reply_text(
                 text=admin_text, 
                 reply_markup=InlineKeyboardMarkup(user_keyboard), 
                 parse_mode=enums.ParseMode.HTML
             )
         
-        # 👥 മെസ്സേജ് അയച്ചത് സാധാരണ യൂസർ ആണെങ്കിൽ
+        # 👥 മെസ്സേജ് അയച്ചത് സാധാരണ യൂസർ ആണെങ്കിൽ ഉള്ള മെസ്സേജ്
         else:
             user_text = (
                 "👋 **ഹലോ! ഞങ്ങളുടെ ബോട്ടുമായി ബന്ധപ്പെട്ട വിവരങ്ങൾ താഴെ നൽകുന്നു:**\n\n"
@@ -52,8 +63,8 @@ async def start_command(client: Client, message: Message):
             await message.reply_text(text=user_text, reply_markup=InlineKeyboardMarkup(user_keyboard))
         return
 
-    # 2️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം
-    batch_id = message.command if len(message.command) > 1 else message.command
+    # 3️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം
+    batch_id = message.command[1] if len(message.command) > 1 else message.command
     is_joined = False
     try:
         member = await client.get_chat_member(chat_id=current_channel, user_id=user_id)
@@ -82,7 +93,6 @@ async def start_command(client: Client, message: Message):
             link = "https://t.me"
 
         keyboard = [[InlineKeyboardButton("📩 Request to Join Channel", url=link)]]
-        # 🚨 ഇവിടെയും parse_mode മാറ്റി
         await message.reply_text(
             "⚠️ <b>ഫയലുകൾ ലഭിക്കുന്നതിനായി താഴെ കാണുന്ന ചാനലിലേക്ക് Join Request അയക്കുക!</b>\n\n"
             "👇 <i>താഴെയുള്ള ബട്ടൺ അമർത്തി റിക്വസ്റ്റ് കൊടുക്കുന്ന നിമിഷം ബോട്ട് ഫയലുകൾ അയച്ചു തരും.</i>",
@@ -97,7 +107,6 @@ async def start_command(client: Client, message: Message):
         start_id = batch_data['start_id']
         end_id = batch_data['end_id']
         
-        # 🚨 ഇവിടെയും parse_mode മാറ്റി
         info_msg = await message.reply_text(
             "✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!", 
             parse_mode=enums.ParseMode.HTML
@@ -114,6 +123,9 @@ async def start_command(client: Client, message: Message):
         asyncio.create_task(auto_delete_messages(client, message.chat.id, sent_msg_ids, info_msg.id))
     else:
         await message.reply_text("❌ തെറ്റായ ലിങ്ക് അല്ലെങ്കിൽ ഈ ബാച്ച് നിലവിലില്ല!")
+
+
+
 
 # Admin Batch File Forwarding Lock
 @Client.on_message(filters.forwarded & filters.user(OWNER_ID) & (filters.document | filters.photo | filters.video | filters.audio | filters.sticker | filters.text))
