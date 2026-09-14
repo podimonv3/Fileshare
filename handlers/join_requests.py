@@ -3,9 +3,38 @@ from pyrogram import Client, enums # 🚨 enums ഇവിടെ ഇമ്പോ�
 from info import OWNER_ID
 from database import requests_collection, batch_collection, get_req_channel, is_maintenance_mode
 
-# Auto Delete Helper Function
+# handlers/join_requests.py (അല്ലെങ്കിൽ ഒരു common helper ഫയലിൽ ഇടാം)
+import math
+
 async def auto_delete_messages(client: Client, chat_id: int, message_ids: list, info_msg_id: int, delay: int = 300):
-    await asyncio.sleep(delay)
+    total_time = delay
+    while delay > 0:
+        await asyncio.sleep(10) # ഓരോ 10 സെക്കൻഡിലും അപ്ഡേറ്റ് ചെയ്യും
+        delay -= 10
+        
+        # പ്രോഗ്രസ് ബാർ നിർമ്മാണം
+        percentage = (delay / total_time) * 100
+        completed = math.floor(percentage / 10)
+        progress_bar = "█" * completed + "░" * (10 - completed)
+        
+        # മിനിറ്റും സെക്കൻഡും കണക്കാക്കുന്നു
+        mins, secs = divmod(delay, 60)
+        time_text = f"{mins:02d}:{secs:02d}"
+        
+        try:
+            await client.edit_message_text(
+                chat_id=chat_id,
+                message_id=info_msg_id,
+                text=f"✨ **നിങ്ങൾ തിരഞ്ഞ ഫയലുകൾ മുകളിൽ നൽകിയിട്ടുണ്ട്!** 👇\n\n"
+                     f"⚠️ **പകർപ്പവകാശ പ്രശ്നം ഒഴിവാക്കാൻ ഫയലുകൾ ഉടൻ ഡിലീറ്റ് ആകും:**\n"
+                     f"⏳ `[{progress_bar}] {time_text}`\n\n"
+                     f"⚡ _അതിനു മുൻപായി നിങ്ങളുടെ Saved Messages-ലേക്ക് ഫോർവേഡ് ചെയ്യുക!_"
+            )
+        except Exception:
+            # മെസ്സേജ് ഇതിനകം ഡിലീറ്റ് ആവുകയോ എറർ വരികയോ ചെയ്താൽ ലൂപ്പ് നിർത്തും
+            break
+
+    # സമയം അവസാനിക്കുമ്പോൾ എല്ലാ മെസ്സേജുകളും ഡിലീറ്റ് ചെയ്യുന്നു
     try:
         await client.delete_messages(chat_id, info_msg_id)
     except:
@@ -15,6 +44,7 @@ async def auto_delete_messages(client: Client, chat_id: int, message_ids: list, 
             await client.delete_messages(chat_id, msg_id)
         except:
             continue
+
 
 @Client.on_chat_join_request()
 async def handle_join_request(client: Client, request):
