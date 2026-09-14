@@ -33,31 +33,35 @@ def get_db_size():
 
 # --- Add this to the bottom of database.py ---
 
-def is_maintenance_mode():
-    """Checks if maintenance mode is enabled."""
-    config = settings_collection.find_one({'_id': 'maintenance_config'})
-    if config:
-        return config.get('status', False)
-    return False
+# --- database.py ഫയലിന്റെ ഏറ്റവും താഴെയായി ഇത് കോപ്പി ചെയ്ത് ചേർക്കുക ---
 
-def set_maintenance_mode(status: bool):
-    """Enables (True) or Disables (False) maintenance mode."""
+def is_delete_timer_on():
+    """ഡിലീറ്റ് ടൈമർ ഓൺ ആണോ എന്ന് നോക്കുന്നു (Default: True)"""
+    config = settings_collection.find_one({'_id': 'delete_timer_config'})
+    if config:
+        return config.get('status', True)
+    return True
+
+def set_delete_timer_status(status: bool):
+    """ഡിലീറ്റ് ടൈമർ ഓൺ/ഓഫ് ചെയ്യാൻ"""
     settings_collection.update_one(
-        {'_id': 'maintenance_config'}, 
+        {'_id': 'delete_timer_config'}, 
         {'$set': {'status': status}}, 
         upsert=True
     )
 
-# database.py-ൽ താഴെ ചേർക്കുക:
 def get_delete_time():
+    """ഡാറ്റാബേസിൽ നിന്നും ഫയൽ ഡിലീറ്റ് ചെയ്യേണ്ട സമയം എടുക്കുന്നു (Default: 300 Sec / 5 Min)"""
     config = settings_collection.find_one({'_id': 'delete_config'})
     return config.get('time', 300) if config else 300
 
 def set_delete_time(seconds: int):
-    settings_collection.update_one({'_id': 'delete_config'}, {'$set': {'time': seconds}}, upsert=True)
-
-
-# --- database.py-ന്റെ ഏറ്റവും താഴെ ചേർക്കുക ---
+    """ഫയൽ ഡിലീറ്റ് ചെയ്യേണ്ട സമയം മാറ്റാൻ"""
+    settings_collection.update_one(
+        {'_id': 'delete_config'}, 
+        {'$set': {'time': seconds}}, 
+        upsert=True
+    )
 
 def is_protect_content():
     """പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ ആണോ എന്ന് നോക്കുന്നു (Default: True)"""
@@ -70,6 +74,21 @@ def set_protect_content(status: bool):
     """പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ/ഓഫ് ചെയ്യാൻ"""
     settings_collection.update_one(
         {'_id': 'protect_config'}, 
+        {'$set': {'status': status}}, 
+        upsert=True
+    )
+
+def is_maintenance_mode():
+    """മെയ്ന്റനൻസ് മോഡ് ഓൺ ആണോ എന്ന് നോക്കുന്നു"""
+    config = settings_collection.find_one({'_id': 'maintenance_config'})
+    if config:
+        return config.get('status', False)
+    return False
+
+def set_maintenance_mode(status: bool):
+    """മെയ്ന്റനൻസ് മോഡ് ഓൺ/ഓഫ് ചെയ്യാൻ"""
+    settings_collection.update_one(
+        {'_id': 'maintenance_config'}, 
         {'$set': {'status': status}}, 
         upsert=True
     )
