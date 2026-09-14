@@ -6,7 +6,7 @@ from info import LOG_CHANNEL_ID
 
 # 🚫 സ്പാം വാക്കുകളും ഇമോജികളും
 BAD_WORDS_PATTERN = re.compile(r'(xvideos|xnxxn|xnxx|xhamster|xxx videos|തുണ്ട്|porn\s*videos)', re.IGNORECASE)
-ADULT_EMOJIS = ["🍑", "🍆", "🍌", "💦", "💋", "👙", "🔞", "🥵", "👅"]
+ADULT_EMOJIS = ["🍑", "🍆", "🍌", "💦", "💋", "👙", "🔞", "🥵", "👅", "👆"]
 
 @Client.on_message(filters.text & filters.group, group=1)
 async def anti_spam_handler(client: Client, message: Message):
