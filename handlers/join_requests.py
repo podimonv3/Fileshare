@@ -8,7 +8,7 @@ from database import (
     get_req_channel, 
     is_maintenance_mode,
     is_protect_content,
-    is_filesecure_mode,
+    is_delete_timer_on,   # 🚨 തിരുത്തിയത്: ശരിയായ ടൈമർ ഫങ്ക്ഷൻ ഇമ്പോർട്ട് ചെയ്തു
     get_delete_time
 )
 
@@ -29,7 +29,6 @@ async def auto_delete_messages(client: Client, chat_id: int, message_ids: list, 
         time_text = f"{mins:02d}:{secs:02d}"
         
         try:
-            # 🚨 parse_mode=enums.ParseMode.HTML ഇവിടെ കൃത്യമായി ചേർത്തു (ക്രാഷ് ഒഴിവാക്കാൻ)
             await client.edit_message_text(
                 chat_id=chat_id,
                 message_id=info_msg_id,
@@ -91,12 +90,12 @@ async def handle_join_request(client: Client, request):
                 
                 # അഡ്മിൻ പാനൽ സെറ്റിങ്സുകൾ റീഡ് ചെയ്യുന്നു ⚙️
                 p_mode = is_protect_content()
-                fs_mode = is_filesecure_mode()
+                timer_mode = is_delete_timer_on() # 🚨 തിരുത്തിയത്: ശരിയായ ഫങ്ക്ഷൻ കൊടുത്തു
                 del_time = get_delete_time()
                 
                 try:
                     info_text = "✨ <b>നിങ്ങളുടെ ജോയിൻ റിക്വസ്റ്റ് ലഭിച്ചിരിക്കുന്നു! നിങ്ങൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു:</b> 👇"
-                    if fs_mode:
+                    if timer_mode: # 🚨 ടൈമർ ഓൺ ആണെങ്കിൽ മാത്രം മെസ്സേജിൽ ഡിലീറ്റ് ടൈം കാണിക്കും
                         info_text += f"\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ {del_time // 60} മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!"
                         
                     info_msg = await client.send_message(
@@ -111,14 +110,15 @@ async def handle_join_request(client: Client, request):
                             chat_id=user_id, 
                             from_chat_id=from_chat, 
                             message_id=msg_id, 
-                            protect_content=p_mode # 🚨 ഡയനാമിക് പ്രൊട്ടക്ഷൻ ലോക്ക്
+                            protect_content=p_mode # ഡയനാമിക് പ്രൊട്ടക്ഷൻ ലോക്ക്
                         )
                         sent_msg_ids.append(copied_msg.id)
                     
-                    # ഫയൽ സെക്യൂർ ഓൺ ആണെങ്കിൽ മാത്രം ലൈവ് പ്രോഗ്രസ് ബാർ ടാസ്ക് റൺ ചെയ്യുന്നു ⏱️
-                    if fs_mode and sent_msg_ids:
+                    # 🚨 അഡ്മിൻ പാനലിൽ ടൈമർ ഓൺ ആണെങ്കിൽ മാത്രം ലൈവ് പ്രോഗ്രസ് ബാർ ടാസ്ക് റൺ ചെയ്യുന്നു ⏱️
+                    if timer_mode and sent_msg_ids:
                         asyncio.create_task(auto_delete_messages(client, user_id, sent_msg_ids, info_msg.id, delay=del_time))
                         
                     requests_collection.update_one({'user_id': user_id, 'channel_id': chat_id}, {'$unset': {'batch_id': ""}})
                 except:
                     pass
+
