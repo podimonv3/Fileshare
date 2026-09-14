@@ -6,6 +6,29 @@ from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from info import OWNER_ID
 from database import settings_collection, requests_collection, users_collection, batch_collection, get_req_channel, get_db_size
 
+
+
+# --- Add this to the bottom of handlers/admin_commands.py ---
+
+from database import set_maintenance_mode, is_maintenance_mode
+
+@Client.on_message(filters.command("maintenance") & filters.user(OWNER_ID))
+async def toggle_maintenance(client: Client, message: Message):
+    if len(message.command) < 2:
+        current_status = "ON 🔴" if is_maintenance_mode() else "OFF 🟢"
+        await message.reply_text(f"🛠️ **Maintenance Mode Status:** `{current_status}`\n\nTo change use:\n`/maintenance on` or `/maintenance off`")
+        return
+        
+    action = message.command[1].lower()
+    if action == "on":
+        set_maintenance_mode(True)
+        await message.reply_text("🔴 **Maintenance Mode Enabled!**\nRegular users will no longer be able to use the bot until it's turned off.")
+    elif action == "off":
+        set_maintenance_mode(False)
+        await message.reply_text("🟢 **Maintenance Mode Disabled!**\nThe bot is now fully operational for everyone.")
+    else:
+        await message.reply_text("❌ Invalid parameter! Use `/maintenance on` or `/maintenance off`")
+
 async def generate_stats_text() -> str:
     total_users = users_collection.count_documents({})
     total_batches = batch_collection.count_documents({})
