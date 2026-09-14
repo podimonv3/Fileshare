@@ -1,4 +1,4 @@
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums # 🚨 enums ഇവിടെ ഇമ്പോർട്ട് ചെയ്തിട്ടുണ്ട്
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 
 @Client.on_message(filters.new_chat_members)
@@ -8,6 +8,8 @@ async def welcome_new_member(client: Client, message: Message):
             continue
 
         user_mention = member.mention
+        
+        # 🔗 നിങ്ങളുടെ ഒഫീഷ്യൽ ലിങ്കുകൾ ബട്ടണുകളാക്കി ഇവിടെ നൽകിയിരിക്കുന്നു
         welcome_keyboard = [
             [
                 InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓𝖓𝖊𝖑 🎈", url="https://t.me"),
@@ -28,11 +30,16 @@ async def welcome_new_member(client: Client, message: Message):
             f"Bhramam ❌\n"
             f"Bhramam 2020✅\n"
             f"ഇങ്ങനെ റിക്വസ്റ്റ് ചെയ്തിട്ടും മൂവി ലഭിച്ചില്ലെങ്കിൽ \n"
-            f"<code>/request Bhramam 2020</code> (ഉപ ഉപയോഗിക്കുക)\n\n"
+            f"<code>/request Bhramam 2020</code> (ഉപയോഗിക്കുക)\n\n"
             f"🚸 <b>NB:</b> [Movie+Year] Format -ൽ കിട്ടിയില്ലെങ്കിൽ മാത്രം താഴെയുള്ള ബട്ടണുകൾ ഉപയോഗിക്കുക 👇"
         )
         try:
-            await message.reply_text(text=welcome_text, reply_markup=reply_markup, disable_web_page_preview=True)
-        except:
-            pass
-
+            # 🚨 എറർ വരാതിരിക്കാൻ parse_mode സെറ്റ് ചെയ്തു
+            await message.reply_text(
+                text=welcome_text, 
+                reply_markup=reply_markup, 
+                parse_mode=enums.ParseMode.HTML,
+                disable_web_page_preview=True
+            )
+        except Exception as e:
+            print(f"Welcome Message Error: {e}")
