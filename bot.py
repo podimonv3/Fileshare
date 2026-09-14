@@ -1,8 +1,8 @@
 import logging
 import threading
-import asyncio  # 🚨 ആഡ് ചെയ്തു
+import asyncio  
 from flask import Flask
-from pyrogram import Client, idle # 🚨 idle ഇമ്പോർട്ട് ചെയ്തു
+from pyrogram import Client, idle 
 from info import BOT_TOKEN, API_ID, API_HASH
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -10,6 +10,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
+
+# 🚨 തിരുത്തിയത്: ഫ്ലാസ്കിന്റെ അനാവശ്യ വിസിറ്റ് ലോഗുകൾ (GET / HTTP/1.1 200) Koyeb ലോഗിൽ വരാതിരിക്കാൻ ഓഫ് ചെയ്യുന്നു 👇
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR) # ഗുരുതരമായ എററുകൾ അല്ലാത്ത സാധാരണ ലോഗുകൾ പ്രിന്റ് ചെയ്യില്ല
+
 scheduler = AsyncIOScheduler()
 
 @flask_app.route('/')
@@ -19,7 +24,8 @@ def home():
 def run_flask():
     import os
     port = int(os.getenv("PORT", 8080))
-    flask_app.run(host='0.0.0.0', port=port)
+    # 🚨 തിരുത്തിയത്: സുരക്ഷിതമായ റണ്ണിങ്ങിനായി debug=False എന്ന് ഉറപ്പാക്കി
+    flask_app.run(host='0.0.0.0', port=port, debug=False)
 
 # Pyrogram Client with automatic plugin loading
 app = Client(
@@ -30,7 +36,6 @@ app = Client(
     plugins=dict(root="handlers")
 )
 
-# 🚨 തിരുത്തിയത്: ഫങ്ക്ഷൻ async def ആക്കി മാറ്റി
 async def main():
     if not BOT_TOKEN or not API_ID or not API_HASH:
         logger.error("Error: ആവശ്യമായ ടോക്കണുകൾ സെറ്റ് ചെയ്തിട്ടില്ല!")
@@ -41,11 +46,11 @@ async def main():
     
     logger.info("ബോട്ട് ആരംഭിക്കുന്നു...")
     
-    # 🚨 തിരുത്തിയത്: അസിൻക്രണസ് ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
+    # അസിൻക്രണസ് ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
     await app.start()
     logger.info("ബോട്ട് വിജയകരമായി റൺ ആകുന്നു... 🚀")
     
-    # 🚨 തിരുത്തിയത്: ലൂപ്പ് ഇപ്പോൾ സജീവമായതിനാൽ ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യാം
+    # ലൂപ്പ് സജീവമായതിനാൽ ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
     if not scheduler.running:
         scheduler.start()
         logger.info("ബാക്ക്ഗ്രൗണ്ട് വിഷ് ഷെഡ്യൂളർ ആരംഭിച്ചിരിക്കുന്നു! ⏰")
@@ -57,5 +62,5 @@ async def main():
     await app.stop()
 
 if __name__ == '__main__':
-    # 🚨 തിരുത്തിയത്: async main ഫങ്ക്ഷൻ റൺ ചെയ്യാനുള്ള ശരിയായ വഴി
+    # async main ഫങ്ക്ഷൻ റൺ ചെയ്യാനുള്ള ശരിയായ വഴി
     asyncio.get_event_loop().run_until_complete(main())
