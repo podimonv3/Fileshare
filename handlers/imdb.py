@@ -1,17 +1,12 @@
 import os
-import re
-import asyncio
-import logging
 import requests
 from io import BytesIO
-from bs4 import BeautifulSoup
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from pyrogram.errors import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from PIL import Image, ImageFilter
 
-# ── LOGGING & CONFIG ─────────────────────────────────────────────────────
-logger = logging.getLogger(__name__)
+# 🚨 നിങ്ങളുടെ യഥാർത്ഥ TMDb API Key ഇവിടെ നൽകുക 🚨
+TMDB_API_KEY = "5f28978232d6d780d64dd0d0e0bbe2f2"
 
 # താങ്കൾ ആവശ്യപ്പെട്ട കൃത്യമായ ക്യാപ്ഷൻ ഫോർമാറ്റ്
 IMDB_TEMPLATE = """▶**Film :** __{title} ({year}) | Movie__
@@ -21,117 +16,77 @@ IMDB_TEMPLATE = """▶**Film :** __{title} ({year}) | Movie__
 
 **Team Urvashi Theaters**"""
 
-# താങ്കൾ ആവശ്യപ്പെട്ട /supported ലിസ്റ്റിലുള്ള എല്ലാ ഒഫീഷ്യൽ പ്ലാറ്റ്‌ഫോമുകളും
-SUPPORTED_PLATFORMS = [
-    "netflix", "prime", "amazon", "apple", "hotstar", "sonyliv", "zee5",
-    "aha", "sunnxt", "etvwin", "jojo", "hoichoi", "chaupal", "stage", "kableone", 
-    "waves", "tarangplus", "addatimes", "aao", "manoramamax", "tentkottai", "shortflix",
-    "mubi", "viki", "iqiyi", "wetv", "vivamax", "crunchyroll", "nowtv", "bookmyshow", "youtube"
-]
-
-def clean_tags(text):
-    """ടെക്സ്റ്റുകളെ ഹാഷ്‌ടാഗ് രൂപത്തിലാക്കുന്നു"""
-    if not text or text == "N/A": return "#Movie"
-    return " ".join(f"#{t.strip().replace(' ', '_')}" for t in text.split(",") if t.strip())
-
-def get_free_movie_details(movie_name):
-    """ API Key ഇല്ലാതെ വെബ് സ്ക്രാപ്പിംഗ് വഴി സിനിമ വിവരങ്ങൾ എടുക്കുന്നു """
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+def get_tmdb_movie_details(movie_name):
+    """ TMDb API വഴി സിനിമയുടെ വിവരങ്ങളും ഒഫീഷ്യൽ ചിത്രങ്ങളും കൃത്യമായി കണ്ടെത്തുന്നു """
     try:
-        # IMDb-യിലെ കൃത്യമായ ലിങ്ക് കണ്ടെത്താൻ ഗൂഗിൾ / ബിങ് സെർച്ച് ഉപയോഗിക്കുന്നു
-        search_url = f"https://bing.com{movie_name}+imdb+title"
-        resp = requests.get(search_url, headers=headers, timeout=10)
-        soup = BeautifulSoup(resp.text, 'html.parser')
+        if not TMDB_API_KEY or TMDB_API_KEY == "YOUR_TMDB_API_KEY":
+            return None
+            
+        # 1. സിനിമ തിരയുന്നു
+        search_url = f"https://themoviedb.org{TMDB_API_KEY}&query={movie_name}"
+        search_res = requests.get(search_url, timeout=10).json()
         
-        imdb_url = None
-        for link in soup.find_all('a', href=True):
-            href = link['href']
-            if "://imdb.com" in href:
-                # കൃത്യമായ IMDb ID അടങ്ങിയ ലിങ്ക് വേർതിരിച്ചെടുക്കുന്നു
-                imdb_url = re.search(r'(https://www\.imdb\.com/title/tt\d+)', href)
-                if imdb_url:
-                    imdb_url = imdb_url.group(1)
-                    break
+        if not search_res.get('results'):
+            return None
+            
+        movie_data = search_res['results'][0] # ആദ്യത്തെ റിസൾട്ട് എടുക്കുന്നു
+        movie_id = movie_data['id']
         
-        if imdb_url:
-            # കണ്ടെത്തിയ IMDb പേജിൽ നിന്ന് വിവരങ്ങൾ സ്ക്രാപ്പ് ചെയ്യുന്നു
-            movie_resp = requests.get(imdb_url, headers=headers, timeout=10)
-            m_soup = BeautifulSoup(movie_resp.text, 'html.parser')
+        # 2. ഫുൾ ഡീറ്റെയിൽസും ഭാഷയും കണ്ടെത്താൻ സിനിമയുടെ മെയിൻ പേജ് ലോഡ് ചെയ്യുന്നു
+        detail_url = f"https://themoviedb.org{movie_id}?api_key={TMDB_API_KEY}"
+        m = requests.get(detail_url, timeout=10).json()
+        
+        title = m.get('title', movie_name)
+        release_date = m.get('release_date', '')
+        year = release_date.split('-')[0] if release_date else "N/A"
+        rating = str(round(m.get('vote_average', 0), 1))
+        
+        # ജോണറുകൾ ഹാഷ്‌ടാഗ് ആക്കുന്നു
+        genres_list = [f"#{g['name'].replace(' ', '')}" for g in m.get('genres', [])]
+        genres = " ".join(genres_list) if genres_list else '#Movie'
+        
+        # ഭാഷ ഹാഷ്‌ടാഗ് ആക്കുന്നു
+        spoken_langs = m.get('spoken_languages', [])
+        language = f"#{spoken_langs[0]['english_name'].replace(' ', '')}" if spoken_langs else '#Unknown'
+        
+        # ലാൻഡ്‌സ്‌കേപ്പ് (Backdrop) നോക്കുന്നു, ഇല്ലെങ്കിൽ പോർട്രെയ്റ്റ് എടുക്കുന്നു
+        backdrop = m.get('backdrop_path')
+        portrait = m.get('poster_path')
+        
+        poster_url = None
+        is_portrait = False
+        
+        if backdrop:
+            poster_url = f"https://tmdb.org{backdrop}"
+        elif portrait:
+            poster_url = f"https://tmdb.org{portrait}"
+            is_portrait = True
             
-            # ടൈറ്റിലും വർഷവും എടുക്കുന്നു
-            title_tag = m_soup.find("h1")
-            title = title_tag.text.strip() if title_tag else movie_name.title()
-            
-            # റേറ്റിംഗ് കണ്ടെത്തുന്നു
-            rating_tag = m_soup.find("span", {"class": "sc-b133f001-1"})
-            rating = rating_tag.text.strip() if rating_tag else "N/A"
-            
-            return {
-                'title': title,
-                'year': "2026", # ആവശ്യമെങ്കിൽ കൂടുതൽ ഡൈനാമിക് ആക്കാം
-                'rating': rating,
-                'genres': '#Movie #Cinema',
-                'language': '#Indian',
-                'url': imdb_url
-            }
+        imdb_id = m.get('imdb_id', '')
+        url = f"https://imdb.com{imdb_id}/" if imdb_id else "https://imdb.com"
+        
+        return {
+            'title': title, 'year': year, 'rating': rating,
+            'genres': genres, 'language': language, 'url': url,
+            'poster_url': poster_url, 'is_portrait': is_portrait
+        }
     except Exception as e:
-        logger.error(f"Scraping Engine Error: {e}")
-        
-    return {
-        'title': movie_name.title(),
-        'year': "N/A",
-        'rating': "N/A",
-        'genres': '#Movie',
-        'language': '#Unknown',
-        'url': "https://imdb.com"
-    }
-
-def search_landscape_from_supported_platforms(movie_name):
-    """ റേറ്റ് ലിമിറ്റ് ഇല്ലാതെ വെബിൽ നിന്ന് നേരിട്ട് ലാൻഡ്‌സ്‌കേപ്പ് ചിത്രം കണ്ടെത്തുന്നു """
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    try:
-        # സപ്പോർട്ടഡ് പ്ലാറ്റ്‌ഫോമുകൾ ലക്ഷ്യമിട്ട് ഫ്രീ ഇമേജ് സെർച്ച് നടത്തുന്നു
-        search_url = f"https://bing.com{movie_name}+movie+landscape+poster+wallpaper+16:9"
-        resp = requests.get(search_url, headers=headers, timeout=10)
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        
-        # ചിത്രങ്ങളുടെ യഥാർത്ഥ യുആർഎല്ലുകൾ കണ്ടെത്തുന്നു
-        links = soup.find_all('a', {"class": "iusc"})
-        for link in links[:10]:
-            import json
-            m_data = json.loads(link.get('m', '{}'))
-            image_url = m_data.get('murl')
-            source_url = m_data.get('purl', '').lower()
-            
-            if image_url:
-                # ലിസ്റ്റിലുള്ള ഏതെങ്കിലും OTT സൈറ്റിൽ നിന്നുള്ള ചിത്രമാണോ എന്ന് പരിശോധിക്കുന്നു
-                for platform in SUPPORTED_PLATFORMS:
-                    if platform in source_url:
-                        return image_url
-                        
-        # പ്ലാറ്റ്‌ഫോം ലിങ്കുകളിൽ ഇല്ലെങ്കിൽ ആദ്യത്തെ നല്ല ലാൻഡ്‌സ്‌കേപ്പ് ചിത്രം നൽകുന്നു
-        if links:
-            import json
-            return json.loads(links[0].get('m', '{}')).get('murl')
-    except Exception as e:
-        logger.error(f"Image Fetch Error: {e}")
+        print(f"TMDb Fetch Error: {e}")
     return None
 
 def process_smart_blur_landscape(image_url):
-    """ ചിത്രം ഒരുവേള പോർട്രെയ്റ്റ് ആണെങ്കിൽ വശങ്ങൾ ബ്ലർ ചെയ്ത് ലാൻഡ്‌സ്‌കേപ്പ് ആക്കുന്നു """
+    """ ചിത്രം പോർട്രെയ്റ്റ് ആണെങ്കിൽ വശങ്ങൾ ബ്ലർ ചെയ്ത് ലാൻഡ്‌സ്‌കേപ്പ് (16:9) ആക്കുന്നു """
     try:
         headers = {'User-Agent': 'Mozilla/5.0'}
         res = requests.get(image_url, headers=headers, timeout=10)
         img = Image.open(BytesIO(res.content)).convert("RGB")
         orig_w, orig_h = img.size
         
-        # ചിത്രം ഇതിനകം തന്നെ ലാൻഡ്‌സ്‌കേപ്പ് ആണെങ്കിൽ എഡിറ്റ് ചെയ്യില്ല
         if orig_w > orig_h * 1.3:
             bio = BytesIO(res.content)
             bio.name = 'landscape.jpg'
             return bio
 
-        # പോർട്രെയ്റ്റ് ചിത്രത്തിന് 16:9 തിയേറ്റർ സ്റ്റൈൽ ബ്ലർ നൽകുന്നു
         target_w = int(orig_h * (16 / 9))
         target_h = orig_h
         
@@ -147,13 +102,10 @@ def process_smart_blur_landscape(image_url):
         bg_img.save(bio, 'JPEG')
         bio.seek(0)
         return bio
-    except Exception as e:
+    except Exception:
         return image_url
 
-
-
-# ── COMMAND HANDLERS ─────────────────────────────────────────────────────
-
+# /p കമാൻഡ് ഹാൻഡ്‌ലർ
 @Client.on_message(filters.command("p") & filters.incoming)
 async def quick_movie_poster(client, message):
     if len(message.command) < 2:
@@ -161,15 +113,16 @@ async def quick_movie_poster(client, message):
         return
         
     movie_name = " ".join(message.command[1:])
-    status_msg = await message.reply_text("🔍 പ്ലാറ്റ്‌ഫോമുകളിൽ ലാൻഡ്‌സ്‌കേപ്പ് ചിത്രങ്ങൾ തിരയുന്നു...")
+    status_msg = await message.reply_text("🔍 ഒഫീഷ്യൽ പ്ലാറ്റ്‌ഫോമുകളിൽ ലാൻഡ്‌സ്‌കേപ്പ് ചിത്രങ്ങൾ തിരയുന്നു...")
     
-    # 1. സപ്പോർട്ടഡ് പ്ലാറ്റ്‌ഫോമുകളിൽ നിന്ന് ലാൻഡ്‌സ്‌കേപ്പ് ചിത്രം കണ്ടെത്തുന്നു
-    final_image_url = search_landscape_from_supported_platforms(movie_name)
+    # TMDb സിസ്റ്റം വഴി വിവരങ്ങളും ചിത്രങ്ങളും എടുക്കുന്നു
+    movie = get_tmdb_movie_details(movie_name)
     
-    # 2. ക്രാഷ് ഫ്രീ സ്ക്രാപ്പിംഗ് സിസ്റ്റം വഴി വെബിൽ നിന്ന് IMDb വിവരങ്ങൾ എടുക്കുന്നു
-    await status_msg.edit_text("📝 IMDb വിവരങ്ങൾ ശേഖരിക്കുന്നു...")
-    movie = get_free_movie_details(movie_name)
+    if not movie:
+        await status_msg.edit_text("❌ ക്ഷമിക്കണം, ഈ സിനിമയുടെ ഔദ്യോഗിക വിവരങ്ങൾ കണ്ടെത്താനായിില്ല.")
+        return
 
+    final_image_url = movie['poster_url']
     # ചിത്രങ്ങൾ ഒന്നും കണ്ടില്ലെങ്കിൽ ഒരു ഡിഫോൾട്ട് ബാക്കപ്പ് ചിത്രം നൽകുന്നു
     if not final_image_url:
         final_image_url = "https://telegra.ph"
@@ -178,7 +131,6 @@ async def quick_movie_poster(client, message):
         # ഇമേജ് ലാൻഡ്‌സ്‌കേപ്പ് ഫോർമാറ്റിലേക്ക് മാറ്റുന്നു
         photo_payload = process_smart_blur_landscape(final_image_url)
         
-        # താങ്കൾ ആവശ്യപ്പെട്ട കൃത്യമായ ക്യാപ്ഷൻ
         caption = IMDB_TEMPLATE.format(
             title=movie['title'],
             year=movie['year'],
@@ -187,7 +139,6 @@ async def quick_movie_poster(client, message):
             language=movie['language']
         )
         
-        # നിങ്ങളുടെ ആദ്യ സ്ക്രീൻഷോട്ടിലുള്ള അതേ ഇൻലൈൻ ബട്ടണുകൾ
         buttons = InlineKeyboardMarkup([
             [InlineKeyboardButton("⬅️ Prev", callback_data="prev_page"),
              InlineKeyboardButton("1/5", callback_data="page_num"),
