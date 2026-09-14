@@ -5,7 +5,7 @@ from PIL import Image, ImageFilter
 from pyrogram import Client, filters
 
 # നിങ്ങളുടെ TMDb API Key ഇവിടെ നൽകുക
-TMDB_API_KEY = "YOUR_TMDB_API_KEY"
+TMDB_API_KEY = "5f28978232d6d780d64dd0d0e0bbe2f2"
 
 def get_movie_details(movie_name):
     try:
