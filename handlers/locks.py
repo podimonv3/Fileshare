@@ -129,6 +129,55 @@ async def view_all_lock_types(client: Client, message: Message):
     await message.reply_text(status_text, parse_mode=enums.ParseMode.HTML)
 
 
+# 🚨 ഗ്രൂപ്പിലെ മുഴുവൻ മീഡിയകളും ഫീച്ചറുകളും ഒന്നിച്ച് ലോക്ക്/അൺലോക്ക് ചെയ്യാനുള്ള കമാൻഡുകൾ 🔒/🔓
+@Client.on_message(filters.command(["lockall", "unlockall"]))
+async def lock_unlock_all_command(client: Client, message: Message):
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id: return
+
+    # 1. PM-ലാണ് കമാൻഡ് അടിക്കുന്നതെങ്കിൽ കണക്ട് ചെയ്ത ഗ്രൂപ്പ് ഐഡി എടുക്കുന്നു
+    if message.chat.type == enums.ChatType.PRIVATE:
+        active = settings_collection.find_one({'_id': f'active_chat_{user_id}'})
+        if not active:
+            await message.reply_text("⚠️ ആദ്യം <code>/connect [ഗ്രൂപ്പ്_ഐഡി]</code> ഉപയോഗിച്ച് ഗ്രൂപ്പ് ബന്ധിപ്പിക്കുക.", parse_mode=enums.ParseMode.HTML)
+            return
+        chat_id = int(active['chat_id'])
+        chat_title = active['chat_title']
+        
+    # 2. ഗ്രൂപ്പിലാണ് നേരിട്ട് കമാൻഡ് അടിക്കുന്നതെങ്കിൽ
+    else:
+        chat_id = message.chat.id
+        chat_title = message.chat.title
+        try:
+            member = await message.chat.get_member(user_id)
+            if member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] and user_id != OWNER_ID:
+                return
+        except: return
+
+    action = message.command.lower() # 'lockall' അല്ലെങ്കിൽ 'unlockall'
+    status = True if action == "lockall" else False
+
+    # 🔄 VALID_LOCKS ലിസ്റ്റിലുള്ള മുഴുവൻ കീകളും (Keys) പുതിയ സ്റ്റാറ്റസിലേക്ക് മാറ്റുന്നു
+    updated_locks = {}
+    for key in VALID_LOCKS.keys():
+        updated_locks[key] = status
+
+    # ഡാറ്റാബേസിലേക്ക് ഒന്നിച്ച് അപ്ഡേറ്റ് ചെയ്യുന്നു 💾
+    settings_collection.update_one(
+        {'_id': f'locks_{int(chat_id)}'}, 
+        {'$set': {'locks': updated_locks}}, 
+        upsert=True
+    )
+    
+    if status:
+        msg_text = f"🚨 <b>{chat_title} - EMERGENCY LOCKDOWN!</b> 🚨\n\n🔒 ഗ്രൂപ്പിലെ മുഴുവൻ മീഡിയകളും, സർവീസ് നോട്ടിഫിക്കേഷനുകളും, ടെക്സ്റ്റ് സ്റ്റൈലുകളും ഒന്നിച്ച് <b>ലോക്ക് ചെയ്തിരിക്കുന്നു (Emergency Lockdown)</b>. ഇനി അഡ്മിൻമാർക്ക് മാത്രമേ ഗ്രൂപ്പിൽ എന്തെങ്കിലും അയക്കാൻ സാധിക്കൂ!"
+    else:
+        msg_text = f"🔓 <b>{chat_title} - LOCKDOWN LIFTED!</b> 🔓\n\n✅ ഗ്രൂപ്പിലെ മുഴുവൻ ലോക്കുകളും ഒന്നിച്ച് <b>ഒഴിവാക്കിയിരിക്കുന്നു</b>. സാധാരണ മെമ്പർമാർക്ക് ഇനി മുതൽ ഗ്രൂപ്പിൽ എല്ലാം അയക്കാവുന്നതാണ്."
+
+    await message.reply_text(msg_text, parse_mode=enums.ParseMode.HTML)
+
+
+
 @Client.on_message(filters.command("connect") & filters.private)
 async def connect_group_command(client: Client, message: Message):
     user_id = message.from_user.id
