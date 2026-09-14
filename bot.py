@@ -3,11 +3,13 @@ import threading
 from flask import Flask
 from pyrogram import Client
 from info import BOT_TOKEN, API_ID, API_HASH
+from apscheduler.schedulers.asyncio import AsyncScheduler
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
+scheduler = AsyncScheduler()
 
 @flask_app.route('/')
 def home():
