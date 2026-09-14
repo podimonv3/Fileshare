@@ -9,8 +9,8 @@ from database import (
     get_req_channel, 
     add_user, 
     is_maintenance_mode,
-    is_protect_content,  # 🚨 ഡാറ്റാബേസ് ചെക്കിങ് ഇമ്പോർട്ട് ചെയ്തു
-    is_filesecure_mode,   # 🚨 ഫയൽ സെക്യൂർ സ്റ്റാറ്റസ്
+    is_protect_content,  
+    is_delete_timer_on,   # 🚨 തിരുത്തിയത്: ശരിയായ ടൈമർ ഫങ്ക്ഷൻ ഇമ്പോർട്ട് ചെയ്തു
     get_delete_time
 )
 from handlers.join_requests import auto_delete_messages
@@ -33,10 +33,10 @@ async def start_command(client: Client, message: Message):
     
     # 2️⃣ ലിങ്ക് വഴി അല്ലാതെ വെറുതെ /start അയക്കുമ്പോൾ വരുന്ന ഭാഗം
     if len(message.command) == 1:
-        # നിങ്ങളുടെ ഒഫീഷ്യൽ ചാനൽ ലിങ്ക് ബട്ടണുകൾ ഇവിടെ അപ്ഡേറ്റ് ചെയ്തു 🔗
+        # നിങ്ങളുടെ ഒഫീഷ്യൽ ചാനൽ ലിങ്ക് ബട്ടണുകൾ ഇവിടെ കൃത്യമായി സജ്ജമാക്കി 🔗
         user_keyboard = [
             [
-                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓นนel 🎈", url="https://t.me"),
+                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓നnel 🎈", url="https://t.me"),
                 InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me")
             ],
             [
@@ -50,7 +50,7 @@ async def start_command(client: Client, message: Message):
                 "👋 **ഹലോ അഡ്മിൻ, സുഖമാണോ!**\n\n"
                 "ഞാൻ ഒരു അഡ്വാന്‍സ്ഡ് ജോയിൻ റിക്വസ്റ്റ് ഫീച്ചറുള്ള ഫയൽ ഷെയറിങ് ബോട്ട് ആണ്. 📂\n\n"
                 "🛠️ **<u>ADMIN COMMANDS LIST</u>**\n\n"
-                "📢 `/admin` - അഡ്മിൻ കൺട്രോൾ പാനൽ ഓപ്പൺ ചെയ്യാൻ (Maintenance, Protect Content, Timer നിയന്ത്രിക്കാം).\n"
+                "📢 `/admin` - അഡ്മിൻ കൺട്രോൾ പാനൽ ഓപ്പൺ ചെയ്യാൻ (Maintenance, Protect Content, Timer എന്നിവ നിയന്ത്രിക്കാം).\n"
                 "📢 `/broadcast` - എല്ലാ ഉപയോക്താക്കൾക്കും മെസ്സേജ് ബ്രോഡ്കാസ്റ്റ് ചെയ്യാൻ.\n"
                 "🆔 `/setchannel [ID]` - പുതിയ റിക്വസ്റ്റ് ചാനൽ ഐഡി സെറ്റ് ചെയ്യാൻ.\n"
                 "📊 `/stats` - ബോട്ടിന്റെ ഡാറ്റാബേസ്, റാം വിവരങ്ങൾ പരിശോധിക്കാൻ.\n\n"
@@ -73,8 +73,13 @@ async def start_command(client: Client, message: Message):
         return
 
     # 3️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം
-    # 🚨 ക്രാഷ് ഒഴിവാക്കാൻ ഇൻഡക്സ് ചെക്കിങ് സുരക്ഷിതമാക്കി
-    batch_id = message.command[1] if len(message.command) > 1 else message.text.split(" ")[1]
+    # 🚨 പൈറോഗ്രാമിൽ ബ്രാക്കറ്റ് ഇൻഡക്സ് എറർ വരാതിരിക്കാൻ സ്പ്ലിറ്റ് സുരക്ഷിതമാക്കി
+    try:
+        batch_id = message.command[1] if len(message.command) > 1 else message.text.split(" ")[1]
+    except IndexError:
+        await message.reply_text("❌ ലിങ്ക് തെറ്റായ ഫോർമാറ്റിലാണ്!")
+        return
+
     is_joined = False
     try:
         member = await client.get_chat_member(chat_id=current_channel, user_id=user_id)
@@ -117,13 +122,13 @@ async def start_command(client: Client, message: Message):
         start_id = batch_data['start_id']
         end_id = batch_data['end_id']
         
-        # അഡ്മിൻ പാനലിലെ നിലവിലെ പ്രൊട്ടക്ഷൻ ലോക്ക് റീഡ് ചെയ്യുന്നു 🔒/🔓
+        # അഡ്മിൻ പാനലിലെ നിലവിലെ കൺട്രോൾ സെറ്റിങ്സുകൾ റീഡ് ചെയ്യുന്നു 🔒/🔓
         p_mode = is_protect_content()
-        fs_mode = is_filesecure_mode()
+        timer_mode = is_delete_timer_on() # 🚨 തിരുത്തിയത്
         del_time = get_delete_time()
         
         info_text = "✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇"
-        if fs_mode:
+        if timer_mode: # 🚨 ഓൺ ആണെങ്കിൽ മാത്രം മുന്നറിയിപ്പ് വാചകം നൽകും
             info_text += f"\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ {del_time // 60} മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!"
             
         info_msg = await message.reply_text(text=info_text, parse_mode=enums.ParseMode.HTML)
@@ -131,19 +136,18 @@ async def start_command(client: Client, message: Message):
         sent_msg_ids = []
         for msg_id in range(start_id, end_id + 1):
             try:
-                # 🚨 protect_content ഡാറ്റാബേസ് അനുസരിച്ച് ഡയനാമിക് ആക്കി മാറ്റി
                 copied_msg = await client.copy_message(
                     chat_id=message.chat.id, 
                     from_chat_id=from_chat, 
                     message_id=msg_id, 
-                    protect_content=p_mode
+                    protect_content=p_mode # ഡയനാമിക് പ്രൊട്ടക്ഷൻ ലോക്ക്
                 )
                 sent_msg_ids.append(copied_msg.id)
             except:
                 continue
         
-        # ഫയൽ സെക്യൂർ ഓൺ ആണെങ്കിൽ മാത്രം ഓട്ടോ-ഡിലീറ്റ് ടാസ്ക് റൺ ചെയ്യുന്നു ⏱️
-        if fs_mode and sent_msg_ids:
+        # 🚨 അഡ്മിൻ പാനലിൽ ടൈമർ ഓൺ ആണെങ്കിൽ മാത്രം ബാക്ക്ഗ്രൗണ്ട് പ്രോഗ്രസ് ബാർ വർക്ക് ചെയ്യും ⏱️
+        if timer_mode and sent_msg_ids:
             asyncio.create_task(auto_delete_messages(client, message.chat.id, sent_msg_ids, info_msg.id, delay=del_time))
     else:
         await message.reply_text("❌ തെറ്റായ ലിങ്ക് അല്ലെങ്കിൽ ഈ ബാച്ച് നിലവിലില്ല!")
