@@ -1,14 +1,6 @@
 import base64
 import asyncio
-from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
-from info import OWNER_ID
-from database import batch_collection, requests_collection, get_req_channel, add_user
-from handlers.join_requests import auto_delete_messages
-
-import base64
-import asyncio
-from pyrogram import Client, filters
+from pyrogram import Client, filters, enums # 🚨 enums ഇമ്പോർട്ട് ചെയ്തിട്ടുണ്ട്
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from info import OWNER_ID
 from database import batch_collection, requests_collection, get_req_channel, add_user
@@ -22,10 +14,9 @@ async def start_command(client: Client, message: Message):
     
     # 1️⃣ ലിങ്ക് വഴി അല്ലാതെ വെറുതെ /start അയക്കുമ്പോൾ വരുന്ന ഭാഗം
     if len(message.command) == 1:
-        # ചാനൽ, ഗ്രൂപ്പ് ലിങ്കുകൾ അടങ്ങിയ ബട്ടണുകൾ
         user_keyboard = [
             [
-                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓𝖓𝖊𝖑 🎈", url="https://t.me"),
+                InlineKeyboardButton("🎈 𝕮𝖍𝖆นนel 🎈", url="https://t.me"),
                 InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me")
             ],
             [
@@ -33,7 +24,7 @@ async def start_command(client: Client, message: Message):
             ]
         ]
         
-        # 👑 മെസ്സേജ് അയച്ചത് ബോട്ട് അഡ്മിൻ (OWNER) ആണെങ്കിൽ കമാൻഡ് ലിസ്റ്റ് കൂടി നൽകുന്നു
+        # 👑 മെസ്സേജ് അയച്ചത് ബോട്ട് അഡ്മിൻ (OWNER) ആണെങ്കിൽ
         if user_id == OWNER_ID:
             admin_text = (
                 "👋 **ഹലോ അഡ്മിൻ, സുഖമാണോ!**\n\n"
@@ -44,10 +35,14 @@ async def start_command(client: Client, message: Message):
                 "📊 `/stats` - ബോട്ടിന്റെ നിലവിലെ യൂസർമാരുടെയും, ഡാറ്റാബേസിന്റെയും, റാം വിവരങ്ങളും പരിശോധിക്കാൻ.\n"
                 "📂 **Batch Link ക്രിയേറ്റ് ചെയ്യാൻ:** ചാനലിലെ ആദ്യത്തെ ഫയലും അവസാനത്തെ ഫയലും ബോട്ടിലേക്ക് ഫോർവേഡ് ചെയ്യുക."
             )
-            # 🚨 ഇവിടെ parse_mode="html" എന്ന് ചെറിയ അക്ഷരങ്ങളിലേക്ക് മാറ്റിയിരിക്കുന്നു
-            await message.reply_text(text=admin_text, reply_markup=InlineKeyboardMarkup(user_keyboard), parse_mode="html")
+            # 🚨 parse_mode=enums.ParseMode.HTML ലേക്ക് മാറ്റി
+            await message.reply_text(
+                text=admin_text, 
+                reply_markup=InlineKeyboardMarkup(user_keyboard), 
+                parse_mode=enums.ParseMode.HTML
+            )
         
-        # 👥 മെസ്സേജ് അയച്ചത് സാധാരണ യൂസർ ആണെങ്കിൽ ഉള്ള മെസ്സേജ്
+        # 👥 മെസ്സേജ് അയച്ചത് സാധാരണ യൂസർ ആണെങ്കിൽ
         else:
             user_text = (
                 "👋 **ഹലോ! ഞങ്ങളുടെ ബോട്ടുമായി ബന്ധപ്പെട്ട വിവരങ്ങൾ താഴെ നൽകുന്നു:**\n\n"
@@ -58,7 +53,7 @@ async def start_command(client: Client, message: Message):
         return
 
     # 2️⃣ ഫയൽ ലിങ്ക് വഴി വരികയാണെങ്കിൽ ഉള്ള ഭാഗം
-    batch_id = message.command[1] if len(message.command) > 1 else message.command
+    batch_id = message.command if len(message.command) > 1 else message.command
     is_joined = False
     try:
         member = await client.get_chat_member(chat_id=current_channel, user_id=user_id)
@@ -87,12 +82,12 @@ async def start_command(client: Client, message: Message):
             link = "https://t.me"
 
         keyboard = [[InlineKeyboardButton("📩 Request to Join Channel", url=link)]]
-        # 🚨 ഇവിടെയും parse_mode="html" ആക്കി
+        # 🚨 ഇവിടെയും parse_mode മാറ്റി
         await message.reply_text(
             "⚠️ <b>ഫയലുകൾ ലഭിക്കുന്നതിനായി താഴെ കാണുന്ന ചാനലിലേക്ക് Join Request അയക്കുക!</b>\n\n"
             "👇 <i>താഴെയുള്ള ബട്ടൺ അമർത്തി റിക്വസ്റ്റ് കൊടുക്കുന്ന നിമിഷം ബോട്ട് ഫയലുകൾ അയച്ചു തരും.</i>",
             reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="html"
+            parse_mode=enums.ParseMode.HTML
         )
         return
 
@@ -102,8 +97,11 @@ async def start_command(client: Client, message: Message):
         start_id = batch_data['start_id']
         end_id = batch_data['end_id']
         
-        # 🚨 ഇവിടെയും parse_mode="html" ആക്കി
-        info_msg = await message.reply_text("✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!", parse_mode="html")
+        # 🚨 ഇവിടെയും parse_mode മാറ്റി
+        info_msg = await message.reply_text(
+            "✨ <b>താങ്കൾ തിരഞ്ഞ ഫയലുകൾ താഴെ നൽകുന്നു!</b> 👇\n\n⚠️ <b>ശ്രദ്ധിക്കുക:</b> ഈ ഫയലുകൾ 5 മിനിറ്റിനുള്ളിൽ തനിയെ ഡിലീറ്റ് ആകുന്നതാണ്!", 
+            parse_mode=enums.ParseMode.HTML
+        )
         
         sent_msg_ids = []
         for msg_id in range(start_id, end_id + 1):
@@ -154,5 +152,3 @@ async def handle_forwarded_files(client: Client, message: Message):
         
         await message.reply_text(f"✅ <b>Batch നിർമ്മിച്ചിരിക്കുന്നു!</b>\n🔗 <b>Batch ലിങ്ക്:</b> {batch_link}")
         del client.user_data_store[user_id]
-
-
