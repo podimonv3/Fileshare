@@ -47,3 +47,11 @@ def set_maintenance_mode(status: bool):
         {'$set': {'status': status}}, 
         upsert=True
     )
+
+# database.py-ൽ താഴെ ചേർക്കുക:
+def get_delete_time():
+    config = settings_collection.find_one({'_id': 'delete_config'})
+    return config.get('time', 300) if config else 300
+
+def set_delete_time(seconds: int):
+    settings_collection.update_one({'_id': 'delete_config'}, {'$set': {'time': seconds}}, upsert=True)
