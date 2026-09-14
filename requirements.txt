@@ -10,3 +10,4 @@ Pillow
 httpx
 beautifulsoup4
 imdbio
+aiohttp
