@@ -32,6 +32,103 @@ def get_locks_markup(chat_id: int):
     keyboard.append([InlineKeyboardButton("📊 Close Settings", callback_data="lck_close")])
     return InlineKeyboardMarkup(keyboard)
 
+
+# 🛠️ കമാൻഡ് വഴി നേരിട്ട് 28 ലോക്കുകളും നിയന്ത്രിക്കാനുള്ള ബാക്കപ്പ് സിസ്റ്റം 🔒/🔓
+@Client.on_message(filters.command(["lock", "unlock"]))
+async def lock_unlock_command(client: Client, message: Message):
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id: return
+
+    # 1. പ്രൈവറ്റ് ചാറ്റിലാണ് (PM) അഡ്മിൻ കമാൻഡ് അടിക്കുന്നതെങ്കിൽ:
+    if message.chat.type == enums.ChatType.PRIVATE:
+        active = settings_collection.find_one({'_id': f'active_chat_{user_id}'})
+        if not active:
+            await message.reply_text("⚠️ ആദ്യം <code>/connect [ഗ്രൂപ്പ്_ഐഡി]</code> ഉപയോഗിച്ച് ഗ്രൂപ്പ് ബന്ധിപ്പിക്കുക.", parse_mode=enums.ParseMode.HTML)
+            return
+        chat_id = int(active['chat_id'])
+        chat_title = active['chat_title']
+    
+    # 2. ഗ്രൂപ്പിലാണ് നേരിട്ട് കമാൻഡ് അടിക്കുന്നതെങ്കിൽ:
+    else:
+        chat_id = message.chat.id
+        chat_title = message.chat.title
+        try:
+            member = await message.chat.get_member(user_id)
+            if member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] and user_id != OWNER_ID:
+                return
+        except: return
+
+    # കമാൻഡിനൊപ്പം മീഡിയ ടൈപ്പ് നൽകിയിട്ടില്ലെങ്കിൽ മുഴുവൻ ലിസ്റ്റും കാണിക്കും
+    if len(message.command) < 2:
+        available_types = "\n".join([f"• <code>{k}</code>" for k in VALID_LOCKS.keys()])
+        await message.reply_text(
+            f"⚠️ **ഉപയോഗിക്കേണ്ട രീതി:**\n"
+            f"🔒 ലോക്ക് ചെയ്യാൻ: <code>/lock [media_type]</code>\n"
+            f"🔓 അൺലോക്ക് ചെയ്യാൻ: <code>/unlock [media_type]</code>\n\n"
+            f"**Media Types (ഇവയിൽ ഒന്ന് ടൈപ്പ് ചെയ്യുക):**\n{available_types}",
+            parse_mode=enums.ParseMode.HTML
+        )
+        return
+
+    action = message.command[0].lower() # 'lock' അല്ലെങ്കിൽ 'unlock'
+    media = message.command[1].lower()   # 'photos', 'videos' തുടങ്ങിയവ
+
+    if media not in VALID_LOCKS:
+        await message.reply_text(f"❌ തെറ്റായ മീഡിയ ടൈപ്പ്! പരിശോധിക്കാൻ വെറുതെ <code>/{action}</code> എന്ന് മാത്രം ടൈപ്പ് ചെയ്യുക.", parse_mode=enums.ParseMode.HTML)
+        return
+
+    # ഡാറ്റാബേസിൽ സ്റ്റാറ്റസ് മാറ്റുന്നു
+    status = True if action == "lock" else False
+    set_group_lock(chat_id, media, status)
+    
+    status_text = "🔒 **ലോക്ക് ചെയ്തു (Delete Mode)**" if status else "🔓 **അനുവദിച്ചു (Allow Mode)**"
+    await message.reply_text(
+        f"✅ <b>{chat_title}</b> എന്ന ഗ്രൂപ്പിൽ <b>{VALID_LOCKS[media].upper()}</b> ഇനി മുതൽ {status_text}!", 
+        parse_mode=enums.ParseMode.HTML
+    )
+
+
+# 📋 ഗ്രൂപ്പിലെ മുഴുവൻ ലോക്ക് സ്റ്റാറ്റസും പരിശോധിക്കാനുള്ള പുതിയ കമാൻഡ് 🔍
+@Client.on_message(filters.command(["locktypes", "locks"]))
+async def view_all_lock_types(client: Client, message: Message):
+    user_id = message.from_user.id if message.from_user else None
+    if not user_id: return
+
+    # 1. PM-ലാണ് കമാൻഡ് അടിക്കുന്നതെങ്കിൽ കണക്ട് ചെയ്ത ഗ്രൂപ്പ് ഐഡി എടുക്കുന്നു
+    if message.chat.type == enums.ChatType.PRIVATE:
+        active = settings_collection.find_one({'_id': f'active_chat_{user_id}'})
+        if not active:
+            await message.reply_text("⚠️ ആദ്യം <code>/connect [ഗ്രൂപ്പ്_ഐഡി]</code> ഉപയോഗിച്ച് ഗ്രൂപ്പ് ബന്ധിപ്പിക്കുക.", parse_mode=enums.ParseMode.HTML)
+            return
+        chat_id = int(active['chat_id'])
+        chat_title = active['chat_title']
+        
+    # 2. ഗ്രൂപ്പിലാണ് നേരിട്ട് കമാൻഡ് അടിക്കുന്നതെങ്കിൽ
+    else:
+        chat_id = message.chat.id
+        chat_title = message.chat.title
+        try:
+            member = await message.chat.get_member(user_id)
+            if member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] and user_id != OWNER_ID:
+                return
+        except: return
+
+    # ഡാറ്റാബേസിൽ നിന്നും തത്സമയ ലോക്ക് വിവരങ്ങൾ എടുക്കുന്നു
+    locks = get_group_locks(chat_id)
+    
+    # മനോഹരമായ ടെക്സ്റ്റ് ലിസ്റ്റ് നിർമ്മിക്കുന്നു
+    status_text = f"📋 <b>★ {chat_title} - LOCK TYPES STATUS ★</b>\n\n"
+    
+    for key, name in VALID_LOCKS.items():
+        # ലോക്ക് ഓൺ ആണെങ്കിൽ 🔴 LOCK (Delete Mode), ഓഫ് ആണെങ്കിൽ 🟢 ALLOW
+        emoji = "🔴 <b>LOCK</b>" if locks.get(key) else "🟢 <b>ALLOW</b>"
+        status_text += f"• <code>{key}</code> → {emoji}\n"
+        
+    status_text += f"\n🛠️ <b>മാറ്റങ്ങൾ വരുത്താൻ:</b>\n<code>/lock [type]</code> അല്ലെങ്കിൽ <code>/unlock [type]</code> ഉപയോഗിക്കുക."
+
+    await message.reply_text(status_text, parse_mode=enums.ParseMode.HTML)
+
+
 @Client.on_message(filters.command("connect") & filters.private)
 async def connect_group_command(client: Client, message: Message):
     user_id = message.from_user.id
