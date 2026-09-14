@@ -107,7 +107,13 @@ def get_group_locks(chat_id: int):
         "photos": False, "videos": False, "stickers": False, "voice": False, 
         "audio": False, "document": False, "animation": False, "poll": False,
         "video_note": False, "contact": False, "location": False, "inline": False,
-        "story": False, "game": False, "channel": False
+        "story": False, "game": False, "channel": False,
+        "new_members": False, "left_members": False, "title_changed": False,
+        "photo_changed": False, "pinned": False, "video_chat": False,
+        # 🚨 പുതിയ അഡ്വാൻസ്ഡ് ടെക്സ്റ്റ് ലോക്കുകൾ
+        "fwd_channel": False, "usernames": False, "hashtags": False, 
+        "commands": False, "emails": False, "links": False, 
+        "text_styles": False, "edited": False
     }
 
 def set_group_lock(chat_id: int, media_type: str, status: bool):
