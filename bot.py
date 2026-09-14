@@ -6,14 +6,21 @@ from pyrogram import Client, idle
 from info import BOT_TOKEN, API_ID, API_HASH
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# 🚨 തിരുത്തിയത്: സാധാരണ ലോഗുകൾ പ്രിന്റ് ചെയ്യാതിരിക്കാൻ റൂട്ട് ലെവൽ ERROR ആക്കി മാറ്റുന്നു 👇
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
 
-# 🚨 തിരുത്തിയത്: ഫ്ലാസ്കിന്റെ അനാവശ്യ വിസിറ്റ് ലോഗുകൾ (GET / HTTP/1.1 200) Koyeb ലോഗിൽ വരാതിരിക്കാൻ ഓഫ് ചെയ്യുന്നു 👇
+# 🚨 തിരുത്തിയത്: ഫ്ലാസ്കിന്റെ വിസിറ്റ് ലോഗുകൾ Koyeb ലോഗിൽ വരാതിരിക്കാൻ ഓഫ് ചെയ്യുന്നു 👇
 log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR) # ഗുരുതരമായ എററുകൾ അല്ലാത്ത സാധാരണ ലോഗുകൾ പ്രിന്റ് ചെയ്യില്ല
+log.setLevel(logging.ERROR) 
+
+# 🚨 തിരുത്തിയത്: പൈറോഗ്രാമിന്റെ പ്ലഗിൻ ലോഡിങ് ഇൻഫോ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു 👇
+logging.getLogger("pyrogram").setLevel(logging.ERROR)
+
+# 🚨 തിരുത്തിയത്: അപ്‌ഷെഡ്യൂളർ ടൈമറിന്റെ (APScheduler) ഇൻഫോ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു 👇
+logging.getLogger("apscheduler").setLevel(logging.ERROR)
 
 scheduler = AsyncIOScheduler()
 
@@ -24,7 +31,6 @@ def home():
 def run_flask():
     import os
     port = int(os.getenv("PORT", 8080))
-    # 🚨 തിരുത്തിയത്: സുരക്ഷിതമായ റണ്ണിങ്ങിനായി debug=False എന്ന് ഉറപ്പാക്കി
     flask_app.run(host='0.0.0.0', port=port, debug=False)
 
 # Pyrogram Client with automatic plugin loading
@@ -44,16 +50,12 @@ async def main():
     # ഫ്ലാസ്ക് വെബ് സെർവർ പശ്ചാത്തലത്തിൽ റൺ ചെയ്യുന്നു
     threading.Thread(target=run_flask, daemon=True).start()
     
-    logger.info("ബോട്ട് ആരംഭിക്കുന്നു...")
-    
-    # അസിൻക്രണസ് ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
+    # ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
     await app.start()
-    logger.info("ബോട്ട് വിജയകരമായി റൺ ആകുന്നു... 🚀")
     
-    # ലൂപ്പ് സജീവമായതിനാൽ ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
+    # ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
     if not scheduler.running:
         scheduler.start()
-        logger.info("ബാക്ക്ഗ്രൗണ്ട് വിഷ് ഷെഡ്യൂളർ ആരംഭിച്ചിരിക്കുന്നു! ⏰")
         
     # ബോട്ട് എപ്പോഴും ആക്ടീവ് ആയി നിലനിർത്താൻ (Keep-alive loop)
     await idle()
