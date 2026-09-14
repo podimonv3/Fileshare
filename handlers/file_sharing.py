@@ -148,7 +148,7 @@ async def handle_forwarded_files(client: Client, message: Message):
         )
         
         bot_info = await client.get_me()
-        batch_link = f"https://t.me{bot_info.username}?start={batch_id}"
+        batch_link = f"https://t.me/{bot_info.username}?start={batch_id}"
         
         await message.reply_text(f"✅ <b>Batch നിർമ്മിച്ചിരിക്കുന്നു!</b>\n🔗 <b>Batch ലിങ്ക്:</b> {batch_link}")
         del client.user_data_store[user_id]
