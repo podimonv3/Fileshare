@@ -19,11 +19,11 @@ IMDB_TEMPLATE = """▶**Film :** __{title} ({year}) | Movie__
 def get_tmdb_movie_details(movie_name):
     """ TMDb API വഴി സിനിമയുടെ വിവരങ്ങളും ഒഫീഷ്യൽ ചിത്രങ്ങളും കൃത്യമായി കണ്ടെത്തുന്നു """
     try:
-        if not TMDB_API_KEY or TMDB_API_KEY == "YOUR_TMDB_API_KEY":
+        if not TMDB_API_KEY or TMDB_API_KEY == "5f28978232d6d780d64dd0d0e0bbe2f2":
             return None
             
         # 1. സിനിമ തിരയുന്നു
-        search_url = f"https://themoviedb.org{TMDB_API_KEY}&query={movie_name}"
+        search_url = f"https://themoviedb.org/{TMDB_API_KEY}&query={movie_name}"
         search_res = requests.get(search_url, timeout=10).json()
         
         if not search_res.get('results'):
@@ -33,7 +33,7 @@ def get_tmdb_movie_details(movie_name):
         movie_id = movie_data['id']
         
         # 2. ഫുൾ ഡീറ്റെയിൽസും ഭാഷയും കണ്ടെത്താൻ സിനിമയുടെ മെയിൻ പേജ് ലോഡ് ചെയ്യുന്നു
-        detail_url = f"https://themoviedb.org{movie_id}?api_key={TMDB_API_KEY}"
+        detail_url = f"https://themoviedb.org/{movie_id}?api_key={TMDB_API_KEY}"
         m = requests.get(detail_url, timeout=10).json()
         
         title = m.get('title', movie_name)
