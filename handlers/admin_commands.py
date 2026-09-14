@@ -5,8 +5,14 @@ from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from info import OWNER_ID
 from database import settings_collection, requests_collection, users_collection, batch_collection, get_req_channel, get_db_size
-from database import is_maintenance_mode, set_maintenance_mode, get_delete_time, set_delete_time
-
+from database import (
+    is_maintenance_mode, 
+    set_maintenance_mode, 
+    get_delete_time, 
+    set_delete_time,
+    is_protect_content,  # 🚨 പുതിയ ഇമ്പോർട്ട്
+    set_protect_content  # 🚨 പുതിയ ഇമ്പോർട്ട്
+)
 
 
 # --- Add this to the bottom of handlers/admin_commands.py ---
@@ -111,14 +117,16 @@ async def refresh_stats_callback(client: Client, query):
 # handlers/admin_commands.py-ൽ ചേർക്കുക:
 def get_admin_panel_markup():
     m_status = "🔴 ON" if is_maintenance_mode() else "🟢 OFF"
+    p_status = "🔒 ON" if is_protect_content() else "🔓 OFF"
     d_time = f"{get_delete_time() // 60} Min"
     
     keyboard = [
         [
-            InlineKeyboardButton(f"🛠️ Maintenance: {m_status}", callback_data="toggle_maint"),
-            InlineKeyboardButton(f"⏳ Delete Time: {d_time}", callback_data="change_time")
+            InlineKeyboardButton(f"🛠️ Maint: {m_status}", callback_data="toggle_maint"),
+            InlineKeyboardButton(f"🔰 Protect: {p_status}", callback_data="toggle_protect") # 🚨 പുതിയ ബട്ടൺ
         ],
         [
+            InlineKeyboardButton(f"⏳ Delete Time: {d_time}", callback_data="change_time"),
             InlineKeyboardButton("📊 Close Panel", callback_data="close_admin")
         ]
     ]
@@ -127,7 +135,7 @@ def get_admin_panel_markup():
 @Client.on_message(filters.command("admin") & filters.user(OWNER_ID))
 async def admin_panel_command(client: Client, message: Message):
     await message.reply_text(
-        "🛠️ **WELCOME TO ADVANCED ADMIN PANEL**\n\nബോട്ടിലെ പ്രധാന സെറ്റിങ്സുകൾ താഴെയുള്ള ബട്ടണുകൾ വഴി നിയന്ത്രിക്കാം:",
+        "🛠️ **WELCOME TO ADVANCED ADMIN PANEL**\n\nബോട്ടിലെ സെറ്റിങ്സുകൾ താഴെയുള്ള ബട്ടണുകൾ വഴി നിയന്ത്രിക്കാം:",
         reply_markup=get_admin_panel_markup()
     )
 
@@ -141,9 +149,14 @@ async def admin_callback_handler(client: Client, query):
         await query.answer(f"Maintenance Mode {'Disabled' if current else 'Enabled'}")
         await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
         
+    elif data == "toggle_protect": # 🚨 പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ/ഓഫ് ലോജിക്
+        current = is_protect_content()
+        set_protect_content(not current)
+        await query.answer(f"Protect Content {'Disabled' if current else 'Enabled'}")
+        await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
+        
     elif data == "change_time":
         current_time = get_delete_time()
-        # 5 മിനിറ്റിൽ നിന്ന് 10 മിനിറ്റിലേക്കും, തിരിച്ച് 5 മിനിറ്റിലേക്കും മാറ്റുന്നു
         new_time = 600 if current_time == 300 else 300
         set_delete_time(new_time)
         await query.answer(f"Delete time changed to {new_time // 60} Minutes")
