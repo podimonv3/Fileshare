@@ -4,20 +4,25 @@ import asyncio
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from info import OWNER_ID
-from database import settings_collection, requests_collection, users_collection, batch_collection, get_req_channel, get_db_size
 from database import (
+    settings_collection, 
+    requests_collection, 
+    users_collection, 
+    batch_collection, 
+    get_req_channel, 
+    get_db_size,
     is_maintenance_mode, 
     set_maintenance_mode, 
     get_delete_time, 
     set_delete_time,
-    is_protect_content,  # 🚨 പുതിയ ഇമ്പോർട്ട്
-    set_protect_content  # 🚨 പുതിയ ഇമ്പോർട്ട്
+    is_protect_content,  
+    set_protect_content,
+    is_delete_timer_on,      
+    set_delete_timer_status   
 )
 
 
 # --- Add this to the bottom of handlers/admin_commands.py ---
-
-from database import set_maintenance_mode, is_maintenance_mode
 
 @Client.on_message(filters.command("maintenance") & filters.user(OWNER_ID))
 async def toggle_maintenance(client: Client, message: Message):
@@ -59,8 +64,8 @@ async def generate_stats_text() -> str:
         f"👤 <b>ആകെ ഉപയോക്താക്കൾ:</b> {total_users}\n"
         f"📦 <b>ആകെ ബാച്ച് ലിങ്കുകൾ:</b> {total_batches}\n"
         f"📩 <b>നിലവിലുള്ള ജോയിൻ റിക്വസ്റ്റുകൾ:</b> {total_requests}\n\n"
-        f"💾 <b>MongoDB:</b> <code>{used_db} MB</code> ({db_perc}%)\n"
-        f"🚀 <b>Koyeb RAM:</b> <code>{ram_used} MB</code> ({ram_perc}%)\n\n"
+        f"💾 <b>MongoDB Space:</b> <code>{used_db} MB</code> ({db_perc}%)\n"
+        f"🚀 <b>Koyeb RAM Used:</b> <code>{ram_used} MB</code> ({ram_perc}%)\n\n"
         f"📢 <b>ചാനൽ ഐഡി:</b> <code>{current_channel}</code>"
     )
 
@@ -118,20 +123,32 @@ async def refresh_stats_callback(client: Client, query):
 def get_admin_panel_markup():
     m_status = "🔴 ON" if is_maintenance_mode() else "🟢 OFF"
     p_status = "🔒 ON" if is_protect_content() else "🔓 OFF"
-    d_time = f"{get_delete_time() // 60} Min"
+    t_status = "⏳ ON" if is_delete_timer_on() else "⏸️ OFF"
+    
+    # സെക്കൻഡുകളെ മിനിറ്റാക്കി മാറ്റുന്നു
+    current_minutes = get_delete_time() // 60
     
     keyboard = [
         [
             InlineKeyboardButton(f"🛠️ Maint: {m_status}", callback_data="toggle_maint"),
-            InlineKeyboardButton(f"🔰 Protect: {p_status}", callback_data="toggle_protect") # 🚨 പുതിയ ബട്ടൺ
+            InlineKeyboardButton(f"🔰 Protect: {p_status}", callback_data="toggle_protect") 
         ],
         [
-            InlineKeyboardButton(f"⏳ Delete Time: {d_time}", callback_data="change_time"),
+            InlineKeyboardButton(f"⏱️ Timer: {t_status}", callback_data="toggle_timer"),
+            InlineKeyboardButton(f"⏰ Time: {current_minutes} Min", callback_data="display_time")
+        ],
+        [
+            # 🚨 സമയം കൂട്ടാനും കുറയ്ക്കാനുമുള്ള പുതിയ ബട്ടണുകൾ
+            InlineKeyboardButton("➖ 1 Min", callback_data="minus_1_min"),
+            InlineKeyboardButton("➕ 1 Min", callback_data="plus_1_min")
+        ],
+        [
             InlineKeyboardButton("📊 Close Panel", callback_data="close_admin")
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
 
+# /admin കമാൻഡ് വഴി പാനൽ ഓപ്പൺ ചെയ്യുന്നു
 @Client.on_message(filters.command("admin") & filters.user(OWNER_ID))
 async def admin_panel_command(client: Client, message: Message):
     await message.reply_text(
@@ -139,6 +156,7 @@ async def admin_panel_command(client: Client, message: Message):
         reply_markup=get_admin_panel_markup()
     )
 
+# ബട്ടൻ ക്ലിക്ക് ആക്ഷനുകൾ കൈകാര്യം ചെയ്യുന്നു
 @Client.on_callback_query(filters.user(OWNER_ID))
 async def admin_callback_handler(client: Client, query):
     data = query.data
@@ -149,18 +167,37 @@ async def admin_callback_handler(client: Client, query):
         await query.answer(f"Maintenance Mode {'Disabled' if current else 'Enabled'}")
         await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
         
-    elif data == "toggle_protect": # 🚨 പ്രൊട്ടക്ട് കണ്ടെന്റ് ഓൺ/ഓഫ് ലോജിക്
+    elif data == "toggle_protect": 
         current = is_protect_content()
         set_protect_content(not current)
         await query.answer(f"Protect Content {'Disabled' if current else 'Enabled'}")
         await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
         
-    elif data == "change_time":
-        current_time = get_delete_time()
-        new_time = 600 if current_time == 300 else 300
-        set_delete_time(new_time)
-        await query.answer(f"Delete time changed to {new_time // 60} Minutes")
+    elif data == "toggle_timer": 
+        current = is_delete_timer_on()
+        set_delete_timer_status(not current)
+        await query.answer(f"Delete Timer {'Disabled' if current else 'Enabled'}")
         await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
         
+    elif data == "plus_1_min": # 🚨 1 മിനിറ്റ് കൂട്ടാൻ (60 സെക്കൻഡ്)
+        current_time = get_delete_time()
+        new_time = current_time + 60
+        set_delete_time(new_time)
+        await query.answer(f"Time increased to {new_time // 60} Minutes")
+        await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
+        
+    elif data == "minus_1_min": # 🚨 1 മിനിറ്റ് കുറയ്ക്കാൻ (കുറഞ്ഞത് 1 മിനിറ്റ് ആയിരിക്കണം)
+        current_time = get_delete_time()
+        if current_time <= 60:
+            await query.answer("⚠️ കുറഞ്ഞ സമയം 1 മിനിറ്റ് ആണ്!", show_alert=True)
+            return
+        new_time = current_time - 60
+        set_delete_time(new_time)
+        await query.answer(f"Time decreased to {new_time // 60} Minutes")
+        await query.edit_message_reply_markup(reply_markup=get_admin_panel_markup())
+        
+    elif data == "display_time":
+        await query.answer(f"നിലവിലെ സമയം: {get_delete_time() // 60} മിനിറ്റ്")
+
     elif data == "close_admin":
         await query.message.delete()
