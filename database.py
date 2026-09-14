@@ -94,15 +94,15 @@ def set_maintenance_mode(status: bool):
     )
 
 
-# --- database.py ഫയലിന്റെ ഏറ്റവും താഴെയായി ഇത് റീപ്ലേസ് ചെയ്യുക ---
+# --- database.py ഫയലിന്റെ ഏറ്റവും താഴെയായി ഇത് ചേർക്കുക ---
 
 def get_group_locks(chat_id: int):
     """ഗ്രൂപ്പിലെ നിലവിലെ എല്ലാ ലോക്ക് സെറ്റിങ്സും എടുക്കുന്നു"""
-    config = settings_collection.find_one({'_id': f'locks_{chat_id}'})
+    config = settings_collection.find_one({'_id': f'locks_{int(chat_id)}'})
     if config:
         return config.get('locks', {})
     
-    # ഡിഫോൾട്ട് ആയി എല്ലാം അനുവദിച്ചിരിക്കുന്നു (Allow = False)
+    # ഡിഫോൾട്ട് ആയി ആദ്യ തവണ എല്ലാ മീഡിയകളും അനുവദിച്ചിരിക്കുന്നു (Allow = False)
     return {
         "photos": False, "videos": False, "stickers": False, "voice": False, 
         "audio": False, "document": False, "animation": False, "poll": False,
@@ -110,7 +110,6 @@ def get_group_locks(chat_id: int):
         "story": False, "game": False, "channel": False,
         "new_members": False, "left_members": False, "title_changed": False,
         "photo_changed": False, "pinned": False, "video_chat": False,
-        # 🚨 പുതിയ അഡ്വാൻസ്ഡ് ടെക്സ്റ്റ് ലോക്കുകൾ
         "fwd_channel": False, "usernames": False, "hashtags": False, 
         "commands": False, "emails": False, "links": False, 
         "text_styles": False, "edited": False
@@ -121,7 +120,7 @@ def set_group_lock(chat_id: int, media_type: str, status: bool):
     current_locks = get_group_locks(chat_id)
     current_locks[media_type] = status
     settings_collection.update_one(
-        {'_id': f'locks_{chat_id}'}, 
+        {'_id': f'locks_{int(chat_id)}'}, 
         {'$set': {'locks': current_locks}}, 
         upsert=True
     )
