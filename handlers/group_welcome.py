@@ -1,4 +1,4 @@
-from pyrogram import Client, filters, enums # 🚨 enums ഇവിടെ ഇമ്പോർട്ട് ചെയ്തിട്ടുണ്ട്
+from pyrogram import Client, filters, enums
 from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 
 @Client.on_message(filters.new_chat_members)
@@ -9,14 +9,14 @@ async def welcome_new_member(client: Client, message: Message):
 
         user_mention = member.mention
         
-        # 🔗 നിങ്ങളുടെ ഒഫീഷ്യൽ ലിങ്കുകൾ ബട്ടണുകളാക്കി ഇവിടെ നൽകിയിരിക്കുന്നു
+        # 🔗 ഒഫീഷ്യൽ ലിങ്കുകൾ ബട്ടണുകളാക്കി ഇവിടെ നൽകിയിരിക്കുന്നു
         welcome_keyboard = [
             [
-                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓𝖓𝖊𝖑 🎈", url="https://t.me"),
-                InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me")
+                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓𝖓𝖊𝖑 🎈", url="https://t.me/UrvashiTheaters_Main"),
+                InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me/+eb__Eg3RS2IyZWQ1")
             ],
             [
-                InlineKeyboardButton("✨️ ʀʊʟɛֆ ✨️", url="https://telegra.ph")
+                InlineKeyboardButton("✨️ ʀʊʟɛֆ ✨️", url="https://telegra.ph/RULES-OF-12-22")
             ]
         ]
         reply_markup = InlineKeyboardMarkup(welcome_keyboard)
@@ -33,13 +33,26 @@ async def welcome_new_member(client: Client, message: Message):
             f"<code>/request Bhramam 2020</code> (ഉപയോഗിക്കുക)\n\n"
             f"🚸 <b>NB:</b> [Movie+Year] Format -ൽ കിട്ടിയില്ലെങ്കിൽ മാത്രം താഴെയുള്ള ബട്ടണുകൾ ഉപയോഗിക്കുക 👇"
         )
+        
+        # ⚠️ ഇവിടെ കൃത്യമായ ഫോട്ടോ ലിങ്ക് (Direct URL) നൽകുക (e.g., https://catbox.moe)
+        photo_url = "https://files.catbox.moe/oryxah.jpg" 
+
         try:
-            # 🚨 എറർ വരാതിരിക്കാൻ parse_mode സെറ്റ് ചെയ്തു
-            await message.reply_text(
-                text=welcome_text, 
+            await message.reply_photo(
+                photo=photo_url,
+                caption=welcome_text, 
                 reply_markup=reply_markup, 
-                parse_mode=enums.ParseMode.HTML,
-                disable_web_page_preview=True
+                parse_mode=enums.ParseMode.HTML
             )
         except Exception as e:
-            print(f"Welcome Message Error: {e}")
+            print(f"Photo load ആയില്ല, പകരം text അയക്കുന്നു. Error: {e}")
+            try:
+                # ഫോട്ടോ ലോഡ് ആയില്ലെങ്കിൽ ടെക്സ്റ്റ് മെസ്സേജ് മാത്രമായി അയക്കുന്നു
+                await message.reply_text(
+                    text=welcome_text,
+                    reply_markup=reply_markup,
+                    parse_mode=enums.ParseMode.HTML,
+                    disable_web_page_preview=True
+                )
+            except Exception as text_err:
+                print(f"Text Message Error: {text_err}")
