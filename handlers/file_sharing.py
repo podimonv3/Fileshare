@@ -36,11 +36,11 @@ async def start_command(client: Client, message: Message):
         # നിങ്ങളുടെ ഒഫീഷ്യൽ ചാനൽ ലിങ്ക് ബട്ടണുകൾ ഇവിടെ കൃത്യമായി സജ്ജമാക്കി 🔗
         user_keyboard = [
             [
-                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓നnel 🎈", url="https://t.me"),
-                InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me")
+                InlineKeyboardButton("🎈 𝕮𝖍𝖆𝖓നnel 🎈", url="https://t.me/UrvashiTheaters_Main"),
+                InlineKeyboardButton("🎈 𝕲𝖗𝖔𝖚𝖕 🎈", url="https://t.me/+eb__Eg3RS2IyZWQ1")
             ],
             [
-                InlineKeyboardButton("✨️ ʀʊʟɛֆ ✨️", url="https://telegra.ph")
+                InlineKeyboardButton("✨️ ʀʊʟɛֆ ✨️", url="https://telegra.ph/RULES-OF-12-22")
             ]
         ]
         
