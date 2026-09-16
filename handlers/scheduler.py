@@ -111,20 +111,15 @@ async def send_daily_wishes(client: Client, wish_type: str):
 # ⏰ ടൈമർ ഷെഡ്യൂളർ സെറ്റ് ചെയ്യുന്നു (ഇന്ത്യൻ സമയം IST അടിസ്ഥാനമാക്കി)
 scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
-from bot import app 
-
 # 🗓️ ദിവസേന കൃത്യസമയത്ത് മെസ്സേജ് പോകാനുള്ള ടൈമിംഗ് ലിസ്റ്റ്
 # 1. രാവിലെ 07:00 മണിക്ക് (Good Morning)
-scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, args=[app, "morning"])
+scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, kwargs={"wish_type": "morning"})
 
 # 2. ഉച്ചയ്ക്ക് 01:00 മണിക്ക് (Good Afternoon)
-scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, args=[app, "afternoon"])
+scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, kwargs={"wish_type": "afternoon"})
 
 # 3. വൈകുന്നേരം 06:30 മണിക്ക് (Good Evening)
-scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, args=[app, "evening"])
+scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, kwargs={"wish_type": "evening"})
 
 # 4. രാത്രി 10:00 മണിക്ക് (Good Night)
-scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, args=[app, "night"])
-
-# ഷെഡ്യൂളർ ആരംഭിക്കുന്നു
-scheduler.start()
+scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, kwargs={"wish_type": "night"})
