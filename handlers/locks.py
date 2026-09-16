@@ -153,8 +153,8 @@ async def lock_unlock_all_command(client: Client, message: Message):
             if member.status not in [enums.ChatMemberStatus.OWNER, enums.ChatMemberStatus.ADMINISTRATOR] and user_id != OWNER_ID:
                 return
         except: return
-
-    action = message.command.lower() # 'lockall' അല്ലെങ്കിൽ 'unlockall'
+            
+    action = message.command[0].lower() # 'lockall' അല്ലെങ്കിൽ 'unlockall'
     status = True if action == "lockall" else False
 
     # 🔄 VALID_LOCKS ലിസ്റ്റിലുള്ള മുഴുവൻ കീകളും (Keys) പുതിയ സ്റ്റാറ്റസിലേക്ക് മാറ്റുന്നു
