@@ -286,15 +286,13 @@ async def check_group_media_locks(client: Client, message: Message):
                     elif ent.type == enums.MessageEntityType.EMAIL and locks.get("emails"): should_delete = True; media_name = VALID_LOCKS["emails"]
                     elif ent.type in [enums.MessageEntityType.URL, enums.MessageEntityType.TEXT_LINK] and locks.get("links"): should_delete = True; media_name = VALID_LOCKS["links"]
                     elif ent.type in [enums.MessageEntityType.BOLD, enums.MessageEntityType.ITALIC, enums.MessageEntityType.SPOILER, enums.MessageEntityType.CODE] and locks.get("text_styles"): should_delete = True; media_name = VALID_LOCKS["text_styles"]
-
+                        
     if should_delete:
         try:
             await message.delete()
-            if media_name:
-                warn = await client.send_message(chat_id=chat_id, text=f"⚠️ {message.from_user.mention}, ഗ്രൂപ്പിൽ <b>{media_name}</b> ഉപയോഗിക്കാൻ അനുവാദമില്ല!")
-                await asyncio.sleep(5)
-                await warn.delete()
-        except: pass
+        except: 
+            pass  
+    
 
 @Client.on_edited_message(filters.group, group=3)
 async def check_edited_messages(client: Client, message: Message):
