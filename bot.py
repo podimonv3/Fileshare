@@ -22,7 +22,8 @@ logging.getLogger("pyrogram").setLevel(logging.ERROR)
 # 🚨 തിരുത്തിയത്: അപ്‌ഷെഡ്യൂളർ ടൈമറിന്റെ (APScheduler) ഇൻഫോ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു 👇
 logging.getLogger("apscheduler").setLevel(logging.ERROR)
 
-scheduler = AsyncIOScheduler()
+# ⏰ ഇന്ത്യൻ സമയം അടിസ്ഥാനമാക്കി മെയിൻ ഷെഡ്യൂളർ സെറ്റ് ചെയ്യുന്നു
+scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 @flask_app.route('/')
 def home():
@@ -52,6 +53,19 @@ async def main():
     
     # ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
     await app.start()
+
+    # 🗓️ വിഷ് ഫയലിൽ നിന്നും ഫങ്ക്ഷൻ ഇമ്പോർട്ട് ചെയ്ത് ഇവിടുത്തെ മെയിൻ ഷെഡ്യൂളറിലേക്ക് ആഡ് ചെയ്യുന്നു
+    try:
+        # ഇവിടെ 'handlers.wishes' എന്നതിന് പകരം നിങ്ങളുടെ wishes ഫയൽ കിടക്കുന്ന ശരിയായ പാത്ത് (Path) നൽകുക
+        from handlers.wishes import send_daily_wishes 
+        
+        # ടൈമിംഗ് ജോബുകൾ സെറ്റ് ചെയ്യുന്നു
+        scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, args=[app, "morning"])
+        scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, args=[app, "afternoon"])
+        scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, args=[app, "evening"])
+        scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, args=[app, "night"])
+    except Exception as e:
+        logger.error(f"Scheduler Jobs Adding Error: {e}")
     
     # ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
     if not scheduler.running:
