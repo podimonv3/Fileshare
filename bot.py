@@ -14,7 +14,6 @@ flask_app = Flask(__name__)
 # ഫ്ലാസ്കിന്റെയും മറ്റ് ലൈബ്രറികളുടെയും അനാവശ്യ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു
 logging.getLogger('werkzeug').setLevel(logging.ERROR) 
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
-logging.getLogger("apscheduler").setLevel(logging.ERROR)
 
 @flask_app.route('/')
 def home():
@@ -44,25 +43,7 @@ async def main():
     
     # പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു (ഇതോടെ എല്ലാ പ്ലഗിൻസും ലോഡ് ആകും)
     await app.start()
-
-    # 🗓️ ബോട്ട് സ്റ്റാർട്ട് ആയ ശേഷം മാത്രം ഷെഡ്യൂളർ ജോബുകൾ ആഡ് ചെയ്യുന്നു
-    try:
-        # scheduler.py ഫയലിൽ നിന്ന് ഫങ്ക്ഷനും ഷെഡ്യൂളറും ഇമ്പോർട്ട് ചെയ്യുന്നു
-        from handlers.scheduler import scheduler, send_daily_wishes 
-        
-        # 🚨 കൃത്യമായി 'client' ആയി നമ്മുടെ ബോട്ടിന്റെ 'app' പാസ്സ് ചെയ്യുന്നു 👇
-        scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, kwargs={"client": app, "wish_type": "morning"})
-        scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, kwargs={"client": app, "wish_type": "afternoon"})
-        scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, kwargs={"client": app, "wish_type": "evening"})
-        scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, kwargs={"client": app, "wish_type": "night"})
-        
-        # ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
-        if not scheduler.running:
-            scheduler.start()
-            print("Wishes Scheduler Started Successfully! ⏰")
-            
-    except Exception as e:
-        logger.error(f"Scheduler Setup Error: {e}")
+    print("Bot Started Successfully! 🚀")
         
     # ബോട്ട് എപ്പോഴും ആക്ടീവ് ആയി നിലനിർത്താൻ (Keep-alive loop)
     await idle()
@@ -72,4 +53,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())
-
