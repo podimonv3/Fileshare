@@ -4,26 +4,17 @@ import asyncio
 from flask import Flask
 from pyrogram import Client, idle 
 from info import BOT_TOKEN, API_ID, API_HASH
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# 🚨 തിരുത്തിയത്: സാധാരണ ലോഗുകൾ പ്രിന്റ് ചെയ്യാതിരിക്കാൻ റൂട്ട് ലെവൽ ERROR ആക്കി മാറ്റുന്നു 👇
+# 🚨 തിരുത്തിയത്: സാധാരണ ലോഗുകൾ പ്രിന്റ് ചെയ്യാതിരിക്കാൻ റൂട്ട് ലെവൽ ERROR ആക്കി മാറ്റുന്നു
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 flask_app = Flask(__name__)
 
-# 🚨 തിരുത്തിയത്: ഫ്ലാസ്കിന്റെ വിസിറ്റ് ലോഗുകൾ Koyeb ലോഗിൽ വരാതിരിക്കാൻ ഓഫ് ചെയ്യുന്നു 👇
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR) 
-
-# 🚨 തിരുത്തിയത്: പൈറോഗ്രാമിന്റെ പ്ലഗിൻ ലോഡിങ് ഇൻഫോ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു 👇
+# ഫ്ലാസ്കിന്റെയും മറ്റ് ലൈബ്രറികളുടെയും അനാവശ്യ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു
+logging.getLogger('werkzeug').setLevel(logging.ERROR) 
 logging.getLogger("pyrogram").setLevel(logging.ERROR)
-
-# 🚨 തിരുത്തിയത്: അപ്‌ഷെഡ്യൂളർ ടൈമറിന്റെ (APScheduler) ഇൻഫോ ലോഗുകൾ ഓഫ് ചെയ്യുന്നു 👇
 logging.getLogger("apscheduler").setLevel(logging.ERROR)
-
-# ⏰ ഇന്ത്യൻ സമയം അടിസ്ഥാനമാക്കി മെയിൻ ഷെഡ്യൂളർ സെറ്റ് ചെയ്യുന്നു
-scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 @flask_app.route('/')
 def home():
@@ -51,25 +42,27 @@ async def main():
     # ഫ്ലാസ്ക് വെബ് സെർവർ പശ്ചാത്തലത്തിൽ റൺ ചെയ്യുന്നു
     threading.Thread(target=run_flask, daemon=True).start()
     
-    # ലൂപ്പിനുള്ളിൽ വെച്ച് പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു
+    # പൈറോഗ്രാം ക്ലയന്റ് സ്റ്റാർട്ട് ചെയ്യുന്നു (ഇതോടെ എല്ലാ പ്ലഗിൻസും ലോഡ് ആകും)
     await app.start()
 
-    # 🗓️ വിഷ് ഫയലിൽ നിന്നും ഫങ്ക്ഷൻ ഇമ്പോർട്ട് ചെയ്ത് ഇവിടുത്തെ മെയിൻ ഷെഡ്യൂളറിലേക്ക് ആഡ് ചെയ്യുന്നു
+    # 🗓️ ബോട്ട് സ്റ്റാർട്ട് ആയ ശേഷം മാത്രം ഷെഡ്യൂളർ ജോബുകൾ ആഡ് ചെയ്യുന്നു
     try:
-        # ഇവിടെ 'handlers.wishes' എന്നതിന് പകരം നിങ്ങളുടെ wishes ഫയൽ കിടക്കുന്ന ശരിയായ പാത്ത് (Path) നൽകുക
-        from handlers.wishes import send_daily_wishes 
+        # scheduler.py ഫയലിൽ നിന്ന് ഫങ്ക്ഷനും ഷെഡ്യൂളറും ഇമ്പോർട്ട് ചെയ്യുന്നു
+        from handlers.scheduler import scheduler, send_daily_wishes 
         
-        # ടൈമിംഗ് ജോബുകൾ സെറ്റ് ചെയ്യുന്നു
-        scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, args=[app, "morning"])
-        scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, args=[app, "afternoon"])
-        scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, args=[app, "evening"])
-        scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, args=[app, "night"])
+        # 🚨 കൃത്യമായി 'client' ആയി നമ്മുടെ ബോട്ടിന്റെ 'app' പാസ്സ് ചെയ്യുന്നു 👇
+        scheduler.add_job(send_daily_wishes, "cron", hour=7, minute=0, kwargs={"client": app, "wish_type": "morning"})
+        scheduler.add_job(send_daily_wishes, "cron", hour=13, minute=0, kwargs={"client": app, "wish_type": "afternoon"})
+        scheduler.add_job(send_daily_wishes, "cron", hour=18, minute=30, kwargs={"client": app, "wish_type": "evening"})
+        scheduler.add_job(send_daily_wishes, "cron", hour=22, minute=0, kwargs={"client": app, "wish_type": "night"})
+        
+        # ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
+        if not scheduler.running:
+            scheduler.start()
+            print("Wishes Scheduler Started Successfully! ⏰")
+            
     except Exception as e:
-        logger.error(f"Scheduler Jobs Adding Error: {e}")
-    
-    # ഷെഡ്യൂളർ സുരക്ഷിതമായി സ്റ്റാർട്ട് ചെയ്യുന്നു
-    if not scheduler.running:
-        scheduler.start()
+        logger.error(f"Scheduler Setup Error: {e}")
         
     # ബോട്ട് എപ്പോഴും ആക്ടീവ് ആയി നിലനിർത്താൻ (Keep-alive loop)
     await idle()
@@ -78,5 +71,5 @@ async def main():
     await app.stop()
 
 if __name__ == '__main__':
-    # async main ഫങ്ക്ഷൻ റൺ ചെയ്യാനുള്ള ശരിയായ വഴി
     asyncio.get_event_loop().run_until_complete(main())
+
